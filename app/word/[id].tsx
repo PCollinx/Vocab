@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Container, Text, Card, Badge, Button } from '../../src/components';
 import { colors, spacing, borderRadius } from '../../src/constants';
 import { getWord } from '../../src/services';
@@ -22,8 +22,9 @@ export default function WordDetailScreen() {
   
   const [word, setWord] = useState<Word | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const player = useAudioPlayer(null);
+  const playerStatus = useAudioPlayerStatus(player);
+  const isPlaying = playerStatus?.playing ?? false;
   
   // Get curated word info if available
   const curatedInfo = CURATED_WORDS.find(w => w.word.toLowerCase() === id?.toLowerCase());
@@ -32,13 +33,13 @@ export default function WordDetailScreen() {
 
   useEffect(() => {
     loadWord();
-    return () => {
-      // Cleanup sound on unmount
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
   }, [id]);
+
+  useEffect(() => {
+    if (word?.audioUrl) {
+      player.replace(word.audioUrl);
+    }
+  }, [player, word?.audioUrl]);
 
   const loadWord = async () => {
     if (!id) return;
@@ -52,21 +53,14 @@ export default function WordDetailScreen() {
     if (!word?.audioUrl || isPlaying) return;
     
     try {
-      setIsPlaying(true);
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: word.audioUrl },
-        { shouldPlay: true }
-      );
-      setSound(newSound);
-      
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          setIsPlaying(false);
-        }
-      });
+      if (playerStatus?.isLoaded) {
+        await player.seekTo(0);
+      } else {
+        player.replace(word.audioUrl);
+      }
+      player.play();
     } catch (error) {
       console.error('Error playing audio:', error);
-      setIsPlaying(false);
     }
   };
 

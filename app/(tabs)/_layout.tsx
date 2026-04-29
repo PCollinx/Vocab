@@ -3,7 +3,7 @@
  * Bottom navigation with 4 tabs using custom tab bar
  */
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Tabs } from "expo-router";
 import {
   View,
@@ -26,6 +26,7 @@ interface TabIconProps {
 
 function TabIcon({ label, focused, iconName, iconNameFocused }: TabIconProps) {
   const animatedValue = useRef(new Animated.Value(focused ? 1 : 0)).current;
+  const [measuredLabelWidth, setMeasuredLabelWidth] = useState(0);
 
   useEffect(() => {
     Animated.timing(animatedValue, {
@@ -42,7 +43,7 @@ function TabIcon({ label, focused, iconName, iconNameFocused }: TabIconProps) {
 
   const paddingHorizontal = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [12, 16],
+    outputRange: [8, 9],
   });
 
   const labelOpacity = animatedValue.interpolate({
@@ -52,12 +53,12 @@ function TabIcon({ label, focused, iconName, iconNameFocused }: TabIconProps) {
 
   const labelWidth = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 70],
+    outputRange: [0, measuredLabelWidth],
   });
 
   const labelMargin = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 8],
+    outputRange: [0, 4],
   });
 
   return (
@@ -66,7 +67,7 @@ function TabIcon({ label, focused, iconName, iconNameFocused }: TabIconProps) {
     >
       <Ionicons
         name={focused ? iconNameFocused : iconName}
-        size={22}
+        size={20}
         color={focused ? colors.white : colors.textMuted}
       />
       <Animated.View
@@ -79,6 +80,17 @@ function TabIcon({ label, focused, iconName, iconNameFocused }: TabIconProps) {
           {label}
         </Text>
       </Animated.View>
+      <Text
+        style={styles.tabLabelMeasure}
+        onLayout={(event) => {
+          const width = Math.ceil(event.nativeEvent.layout.width) + 2;
+          if (width !== measuredLabelWidth) {
+            setMeasuredLabelWidth(width);
+          }
+        }}
+      >
+        {label}
+      </Text>
     </Animated.View>
   );
 }
@@ -112,7 +124,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
     <View
       style={[
         styles.tabBarContainer,
-        { paddingBottom: insets.bottom > 0 ? insets.bottom - 10 : 16 },
+        { paddingBottom: insets.bottom > 0 ? insets.bottom - 10 : 8 },
       ]}
     >
       <View style={styles.tabBar}>
@@ -178,16 +190,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
+    paddingHorizontal: 2,
   },
   tabBar: {
     flexDirection: "row",
-    height: 64,
+    height: 60,
     backgroundColor: colors.textHeading,
     borderRadius: 32,
-    paddingHorizontal: 8,
+    paddingHorizontal: 2,
     alignItems: "center",
-    justifyContent: "space-around",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -204,7 +216,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
+    minHeight: 38,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
     borderRadius: 20,
   },
   labelContainer: {
@@ -212,7 +226,13 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     color: colors.white,
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  tabLabelMeasure: {
+    position: "absolute",
+    opacity: 0,
+    fontSize: 12,
     fontWeight: "600",
   },
 });

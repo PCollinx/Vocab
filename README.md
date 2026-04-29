@@ -41,7 +41,7 @@ WordWise is a mobile vocabulary learning app designed for users who want to impr
 | **expo-router** | ~6.0.23 | File-based navigation |
 | **zustand** | ^5.0.12 | State management |
 | **AsyncStorage** | 2.2.0 | Persistent local storage |
-| **expo-av** | ^16.0.8 | Audio playback for pronunciations |
+| **expo-audio** | ~1.1.1 | Audio playback for pronunciations |
 | **@expo/vector-icons** | ^15.0.3 | Icon library (Ionicons) |
 
 ### Key Dependencies
@@ -50,7 +50,7 @@ WordWise is a mobile vocabulary learning app designed for users who want to impr
 {
   "expo": "~54.0.33",
   "expo-router": "~6.0.23",
-  "expo-av": "^16.0.8",
+  "expo-audio": "~1.1.1",
   "zustand": "^5.0.12",
   "@react-native-async-storage/async-storage": "2.2.0",
   "@expo/vector-icons": "^15.0.3",
