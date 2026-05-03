@@ -101,16 +101,16 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   const tabs = [
     { name: "index", label: "Home", icon: "home-outline", iconFocused: "home" },
     {
-      name: "discover",
-      label: "Discover",
-      icon: "compass-outline",
-      iconFocused: "compass",
+      name: "bookmarks",
+      label: "Bookmarks",
+      icon: "bookmarks-outline",
+      iconFocused: "bookmarks",
     },
     {
       name: "progress",
       label: "Progress",
-      icon: "bar-chart-outline",
-      iconFocused: "bar-chart",
+      icon: "stats-chart-outline",
+      iconFocused: "stats-chart",
     },
     {
       name: "profile",
@@ -177,7 +177,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="discover" />
+      <Tabs.Screen name="bookmarks" />
       <Tabs.Screen name="progress" />
       <Tabs.Screen name="profile" />
     </Tabs>
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: "row",
-    height: 60,
+    height: 62,
     backgroundColor: colors.textHeading,
     borderRadius: 32,
     paddingHorizontal: 2,
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 38,
+    minHeight: 42,
     paddingVertical: 6,
     paddingHorizontal: 4,
     borderRadius: 20,
