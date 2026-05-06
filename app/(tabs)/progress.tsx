@@ -1,12 +1,7 @@
-/**
- * Progress Screen
- * User statistics and learning journey
- */
-
 import { View, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Container, Text, Card, ProgressBar } from "../../src/components";
-import { colors, spacing, borderRadius } from "../../src/constants";
+import { Container, Text, Card, ProgressBar, ScreenHeader } from "../../src/components";
+import { colors, blue, spacing, borderRadius } from "../../src/constants";
 import { useAppStore } from "../../src/store/appStore";
 import { WordProgress } from "../../src/types";
 
@@ -119,42 +114,16 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTopRow}>
-            <View style={styles.headerTitleWrap}>
-              <View style={styles.headerEyebrowRow}>
-                <View style={styles.headerIconWrap}>
-                  <Ionicons
-                    name="trending-up"
-                    size={14}
-                    color={colors.primary}
-                  />
-                </View>
-                <Text variant="caption" style={styles.headerEyebrowText}>
-                  LEARNING JOURNEY
-                </Text>
-              </View>
-              <Text variant="h2" color="heading" style={styles.headerTitle}>
-                Progress
-              </Text>
-              <Text variant="body" color="muted">
-                Track your learning, day by day
-              </Text>
-              <Text variant="caption" color="muted">
-                {today}
-              </Text>
-            </View>
-            <View style={styles.headerCountPill}>
-              <Text variant="h4" style={styles.headerCountText}>
-                {totalWordsLearned}
-              </Text>
-              <Text variant="caption" color="muted">
-                learned
-              </Text>
-            </View>
-          </View>
-        </View>
+        <ScreenHeader
+          iconName="trending-up"
+          eyebrow="LEARNING JOURNEY"
+          title="Progress"
+          subtitle="Track your learning, day by day"
+          count={totalWordsLearned}
+          countLabel="learned"
+        >
+          <Text variant="caption" color="muted">{today}</Text>
+        </ScreenHeader>
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -265,8 +234,8 @@ export default function ProgressScreen() {
               <View style={styles.legendColors}>
                 {[
                   colors.primaryLight,
-                  "#B5D4F4",
-                  "#85B7EB",
+                  blue[100],
+                  blue[200],
                   colors.primary,
                 ].map((color, i) => (
                   <View
@@ -297,8 +266,8 @@ export default function ProgressScreen() {
                   // Color intensity based on word count goal of 5/day
                   let bgColor: string = colors.primaryLight;
                   if (value >= 15) bgColor = colors.primary;
-                  else if (value >= 10) bgColor = "#85B7EB";
-                  else if (value >= 5) bgColor = "#B5D4F4";
+                  else if (value >= 10) bgColor = blue[200];
+                  else if (value >= 5) bgColor = blue[100];
 
                   return (
                     <View
@@ -324,58 +293,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
-  },
-  header: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius["2xl"],
-    padding: spacing[4],
-    marginTop: spacing[3],
-    marginBottom: spacing[4],
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing[3],
-  },
-  headerTitleWrap: {
-    flex: 1,
-    gap: spacing[1],
-  },
-  headerEyebrowRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[2],
-  },
-  headerIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerEyebrowText: {
-    letterSpacing: 0.8,
-    color: colors.textMuted,
-    fontWeight: "700",
-  },
-  headerTitle: {
-    marginTop: 2,
-  },
-  headerCountPill: {
-    minWidth: 72,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
-  },
-  headerCountText: {
-    color: colors.primary,
   },
   statsGrid: {
     flexDirection: "row",

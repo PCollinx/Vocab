@@ -1,8 +1,3 @@
-/**
- * Home Screen
- * Word of the day and quick actions
- */
-
 import { useEffect } from "react";
 import {
   View,
@@ -488,7 +483,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginHorizontal: spacing[4],
-    backgroundColor: "#EEF6E7",
+    backgroundColor: colors.correctLight,
     padding: spacing[4],
     borderRadius: borderRadius.xl,
   },

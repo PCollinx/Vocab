@@ -1,8 +1,3 @@
-/**
- * Bookmarks Screen
- * Shows user's saved words with quick filtering
- */
-
 import { useMemo, useState } from "react";
 import {
   View,
@@ -13,7 +8,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Container, Text, Card, Badge } from "../../src/components";
+import { Container, Text, Card, Badge, ScreenHeader } from "../../src/components";
 import { colors, spacing, borderRadius } from "../../src/constants";
 import { useAppStore } from "../../src/store/appStore";
 
@@ -52,34 +47,14 @@ export default function BookmarksScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
-          <View style={styles.headerTopRow}>
-            <View style={styles.headerTitleWrap}>
-              <View style={styles.headerEyebrowRow}>
-                <View style={styles.headerIconWrap}>
-                  <Ionicons name="bookmark" size={14} color={colors.primary} />
-                </View>
-                <Text variant="caption" style={styles.headerEyebrowText}>
-                  WORD LIBRARY
-                </Text>
-              </View>
-              <Text variant="h2" color="heading" style={styles.headerTitle}>
-                Bookmarks
-              </Text>
-              <Text variant="body" color="muted">
-                Your saved words in one place
-              </Text>
-            </View>
-            <View style={styles.headerCountPill}>
-              <Text variant="h4" style={styles.headerCountText}>
-                {bookmarkedWords.length}
-              </Text>
-              <Text variant="caption" color="muted">
-                saved
-              </Text>
-            </View>
-          </View>
-        </View>
+        <ScreenHeader
+          iconName="bookmark"
+          eyebrow="WORD LIBRARY"
+          title="Bookmarks"
+          subtitle="Your saved words in one place"
+          count={bookmarkedWords.length}
+          countLabel="saved"
+        />
 
         <View style={styles.metricsRow}>
           <View style={styles.metricPill}>
@@ -226,58 +201,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 50,
-  },
-  header: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius["2xl"],
-    padding: spacing[4],
-    marginTop: spacing[3],
-    marginBottom: spacing[4],
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing[3],
-  },
-  headerTitleWrap: {
-    flex: 1,
-    gap: spacing[1],
-  },
-  headerEyebrowRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[2],
-  },
-  headerIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerEyebrowText: {
-    letterSpacing: 0.8,
-    color: colors.textMuted,
-    fontWeight: "700",
-  },
-  headerTitle: {
-    marginTop: 2,
-  },
-  headerCountPill: {
-    minWidth: 62,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
-  },
-  headerCountText: {
-    color: colors.primary,
   },
   metricsRow: {
     flexDirection: "row",
