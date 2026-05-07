@@ -2,4 +2,4 @@
  * Store barrel export
  */
 
-export { useAppStore } from './appStore';
+export { useAppStore } from "./appStore";

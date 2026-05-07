@@ -3,3 +3,4 @@
  */
 
 export * from './dictionaryApi';
+export * from './notificationService';

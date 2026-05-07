@@ -9,7 +9,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { colors } from '../src/constants';
 
 export default function Index() {
-  const { hasCompletedOnboarding, isLoading } = useAppStore();
+  const { hasCompletedOnboarding, isLoggedIn, isLoading } = useAppStore();
 
   if (isLoading) {
     return (
@@ -19,10 +19,8 @@ export default function Index() {
     );
   }
 
-  if (!hasCompletedOnboarding) {
-    return <Redirect href="/onboarding" />;
-  }
-
+  if (!isLoggedIn) return <Redirect href="/auth" />;
+  if (!hasCompletedOnboarding) return <Redirect href="/onboarding" />;
   return <Redirect href="/(tabs)" />;
 }
 

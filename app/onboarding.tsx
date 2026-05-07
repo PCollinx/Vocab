@@ -40,7 +40,7 @@ const slides = [
 export default function OnboardingScreen() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const router = useRouter();
-  const { completeOnboarding, setUserName } = useAppStore();
+  const { completeOnboarding } = useAppStore();
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
@@ -51,7 +51,6 @@ export default function OnboardingScreen() {
   };
 
   const handleComplete = async () => {
-    setUserName('Learner');
     await completeOnboarding();
     router.replace('/(tabs)');
   };

@@ -1,10 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  FlatList,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,7 +26,10 @@ export default function HomeScreen() {
     toggleBookmark,
     isWordBookmarked,
     todayWordCompleted,
+    notificationHistory,
   } = useAppStore();
+
+  const [showNotificationHistory, setShowNotificationHistory] = useState(false);
 
   useEffect(() => {
     fetchTodayWord();
@@ -70,13 +76,18 @@ export default function HomeScreen() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.notificationBtn}>
+              <TouchableOpacity
+                style={styles.notificationBtn}
+                onPress={() => setShowNotificationHistory(true)}
+              >
                 <Ionicons
                   name="notifications-outline"
                   size={17}
                   color={colors.white}
                 />
-                <View style={styles.notificationDot} />
+                {notificationHistory.length > 0 && (
+                  <View style={styles.notificationDot} />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -251,6 +262,88 @@ export default function HomeScreen() {
         {/* Bottom spacing for tab bar */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      <Modal
+        visible={showNotificationHistory}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowNotificationHistory(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowNotificationHistory(false)}
+        >
+          <Pressable style={styles.modalContent} onPress={() => {}}>
+            <View style={styles.modalHandle} />
+
+            <View style={styles.modalHeader}>
+              <Text variant="h4" color="heading">
+                Notification History
+              </Text>
+              <TouchableOpacity onPress={() => setShowNotificationHistory(false)}>
+                <Ionicons name="close" size={22} color={colors.textHeading} />
+              </TouchableOpacity>
+            </View>
+
+            {notificationHistory.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons
+                  name="notifications-off-outline"
+                  size={44}
+                  color={colors.textMuted}
+                />
+                <Text
+                  variant="body"
+                  color="muted"
+                  style={styles.emptyStateText}
+                >
+                  No notifications yet
+                </Text>
+                <Text variant="bodySmall" color="muted" style={styles.emptyStateHint}>
+                  Word reminders will appear here once received
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={notificationHistory}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.historyList}
+                renderItem={({ item }) => (
+                  <View style={styles.historyItem}>
+                    <View style={styles.historyIcon}>
+                      <Ionicons name="book-outline" size={18} color={colors.primary} />
+                    </View>
+                    <View style={styles.historyText}>
+                      <Text variant="label" color="heading">
+                        {item.word}
+                      </Text>
+                      {item.definition ? (
+                        <Text
+                          variant="bodySmall"
+                          color="muted"
+                          style={styles.historyDefinition}
+                          numberOfLines={2}
+                        >
+                          {item.definition}
+                        </Text>
+                      ) : null}
+                      <Text variant="caption" color="muted" style={styles.historyTime}>
+                        {new Date(item.receivedAt).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Container>
   );
 }
@@ -516,5 +609,75 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: spacing[20],
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: borderRadius["3xl"],
+    borderTopRightRadius: borderRadius["3xl"],
+    paddingHorizontal: spacing[6],
+    paddingTop: spacing[3],
+    paddingBottom: spacing[8],
+    maxHeight: "75%",
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.border,
+    alignSelf: "center",
+    marginBottom: spacing[4],
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing[4],
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: spacing[10],
+    gap: spacing[2],
+  },
+  emptyStateText: {
+    marginTop: spacing[2],
+  },
+  emptyStateHint: {
+    textAlign: "center",
+    paddingHorizontal: spacing[6],
+  },
+  historyList: {
+    gap: spacing[2],
+    paddingBottom: spacing[4],
+  },
+  historyItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
+  },
+  historyIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  historyText: {
+    flex: 1,
+    gap: spacing[1],
+  },
+  historyDefinition: {
+    lineHeight: 18,
+  },
+  historyTime: {
+    marginTop: spacing[1],
   },
 });
