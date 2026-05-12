@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { View, StyleSheet, Image, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Container, Text, Button } from '../src/components';
@@ -13,6 +13,8 @@ import { useAppStore } from '../src/store/appStore';
 
 const { width } = Dimensions.get('window');
 
+const GOAL_OPTIONS = [3, 5, 7, 10];
+
 const slides = [
   {
     id: 1,
@@ -20,6 +22,7 @@ const slides = [
     highlight: 'Lifelong impact!',
     subtitle: 'Your daily dose of vocabulary.',
     icon: 'bulb' as const,
+    type: 'info',
   },
   {
     id: 2,
@@ -27,6 +30,7 @@ const slides = [
     highlight: 'a learning journey',
     subtitle: 'An engaging way to master new words and expand your knowledge.',
     icon: 'globe' as const,
+    type: 'info',
   },
   {
     id: 3,
@@ -34,13 +38,26 @@ const slides = [
     highlight: 'progress!',
     subtitle: 'Build streaks, earn achievements, and watch yourself grow.',
     icon: 'trending-up' as const,
+    type: 'info',
+  },
+  {
+    id: 4,
+    title: 'Set your',
+    highlight: 'daily goal!',
+    subtitle: 'How many words would you like to learn each day?',
+    icon: 'trophy' as const,
+    type: 'goal',
   },
 ];
 
 export default function OnboardingScreen() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedGoal, setSelectedGoal] = useState(5);
   const router = useRouter();
-  const { completeOnboarding } = useAppStore();
+  const { completeOnboarding, setDailyGoal } = useAppStore();
+
+  const slide = slides[currentSlide];
+  const isLastSlide = currentSlide === slides.length - 1;
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
@@ -51,11 +68,10 @@ export default function OnboardingScreen() {
   };
 
   const handleComplete = async () => {
+    setDailyGoal(selectedGoal);
     await completeOnboarding();
     router.replace('/(tabs)');
   };
-
-  const slide = slides[currentSlide];
 
   return (
     <View style={styles.container}>
@@ -91,6 +107,36 @@ export default function OnboardingScreen() {
           {slide.subtitle}
         </Text>
 
+        {/* Goal Picker — only on last slide */}
+        {slide.type === 'goal' && (
+          <View style={styles.goalGrid}>
+            {GOAL_OPTIONS.map((goal) => {
+              const active = goal === selectedGoal;
+              return (
+                <TouchableOpacity
+                  key={goal}
+                  style={[styles.goalOption, active && styles.goalOptionActive]}
+                  onPress={() => setSelectedGoal(goal)}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    variant="h2"
+                    style={[styles.goalNumber, active && styles.goalNumberActive]}
+                  >
+                    {goal}
+                  </Text>
+                  <Text
+                    variant="caption"
+                    style={[styles.goalLabel, active && styles.goalLabelActive]}
+                  >
+                    words/day
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {/* Pagination Dots */}
         <View style={styles.pagination}>
           {slides.map((_, index) => (
@@ -107,7 +153,7 @@ export default function OnboardingScreen() {
         {/* Button */}
         <View style={styles.buttonContainer}>
           <Button
-            title={currentSlide === slides.length - 1 ? 'Start Learning' : 'Next'}
+            title={isLastSlide ? 'Start Learning' : 'Next'}
             onPress={handleNext}
             variant="secondary"
             fullWidth
@@ -161,7 +207,43 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: 'rgba(255,255,255,0.8)',
-    marginBottom: spacing[6],
+    marginBottom: spacing[5],
+  },
+  goalGrid: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing[3],
+    marginBottom: spacing[5],
+  },
+  goalOption: {
+    width: 68,
+    height: 72,
+    borderRadius: borderRadius.xl,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[1],
+  },
+  goalOptionActive: {
+    borderColor: colors.streak,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  goalNumber: {
+    color: colors.white,
+    fontWeight: '800',
+  },
+  goalNumberActive: {
+    color: colors.streak,
+  },
+  goalLabel: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 9,
+    textAlign: 'center',
+  },
+  goalLabelActive: {
+    color: colors.streak,
   },
   pagination: {
     flexDirection: 'row',

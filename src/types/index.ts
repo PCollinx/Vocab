@@ -29,17 +29,29 @@ export interface DictionaryAPIResponse {
   sourceUrls?: string[];
 }
 
+// All meanings returned by the dictionary API for a word
+export interface WordMeaning {
+  partOfSpeech: string;
+  definitions: Array<{
+    definition: string;
+    example?: string;
+  }>;
+  synonyms: string[];
+  antonyms: string[];
+}
+
 // Word data structure
 export interface Word {
   id: string;
   word: string;
-  partOfSpeech: string;
+  partOfSpeech: string;    // primary part of speech (from first meaning)
   pronunciation: string;
   audioUrl?: string;
-  definition: string;
-  example?: string;
+  definition: string;       // primary definition (backward-compatible)
+  example?: string;         // primary example (backward-compatible)
   synonyms: string[];
   antonyms: string[];
+  meanings?: WordMeaning[]; // full list of meanings from the API
   difficulty: 'easy' | 'medium' | 'hard';
   category: WordCategory;
   isBookmarked?: boolean;

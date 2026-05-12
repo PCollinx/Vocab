@@ -18,7 +18,8 @@ import { CURATED_WORDS } from '../../src/data';
 export default function WordDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { toggleBookmark, isWordBookmarked, learnedWords, markWordLearned } = useAppStore();
+  const { toggleBookmark, isWordBookmarked, learnedWords, markWordLearned,
+          fetchedWords, bookmarkedWords, todayWord } = useAppStore();
   
   const [word, setWord] = useState<Word | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,7 +30,9 @@ export default function WordDetailScreen() {
   // Get curated word info if available
   const curatedInfo = CURATED_WORDS.find(w => w.word.toLowerCase() === id?.toLowerCase());
   const isBookmarked = id ? isWordBookmarked(id) : false;
-  const isLearned = id ? learnedWords.some(w => w.wordId.toLowerCase() === id.toLowerCase()) : false;
+  const isLearned = word
+    ? learnedWords.some(w => w.wordId.toLowerCase() === word.word.toLowerCase())
+    : false;
 
   useEffect(() => {
     loadWord();
@@ -44,7 +47,48 @@ export default function WordDetailScreen() {
   const loadWord = async () => {
     if (!id) return;
     setIsLoading(true);
-    const fetchedWord = await getWord(id);
+
+    // 1. Check all store caches first — avoids an unnecessary API call
+    const allCached = [
+      ...fetchedWords,
+      ...bookmarkedWords,
+      ...(todayWord ? [todayWord] : []),
+    ];
+    const cached = allCached.find(
+      w => w.id === id || w.word.toLowerCase() === id.toLowerCase()
+    );
+    if (cached) {
+      setWord(cached);
+      setIsLoading(false);
+      return;
+    }
+
+    // 2. The route id is "word-category" (e.g. "serendipity-everyday").
+    //    First try an exact match against the curated list to recover the real word name.
+    const curatedMatch = CURATED_WORDS.find(w => `${w.word}-${w.category}` === id);
+
+    let wordName = id;
+    if (curatedMatch) {
+      wordName = curatedMatch.word;
+    } else {
+      // Strip a known category suffix if present
+      const CATEGORIES = [
+        'everyday', 'business', 'science', 'literature',
+        'technology', 'arts', 'history', 'academic',
+      ];
+      for (const cat of CATEGORIES) {
+        if (id.endsWith(`-${cat}`)) {
+          wordName = id.slice(0, id.length - cat.length - 1);
+          break;
+        }
+      }
+    }
+
+    const fetchedWord = await getWord(
+      wordName,
+      curatedMatch?.category,
+      curatedMatch?.difficulty
+    );
     setWord(fetchedWord);
     setIsLoading(false);
   };

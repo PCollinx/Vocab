@@ -13,7 +13,7 @@ interface TabIconProps {
 
 const TAB_CONFIG = [
   { name: 'index', label: 'Home', icon: 'home-outline', iconFocused: 'home' },
-  { name: 'bookmarks', label: 'Bookmarks', icon: 'bookmarks-outline', iconFocused: 'bookmarks' },
+  { name: 'bookmarks', label: 'Saved', icon: 'bookmarks-outline', iconFocused: 'bookmarks' },
   { name: 'progress', label: 'Progress', icon: 'stats-chart-outline', iconFocused: 'stats-chart' },
   { name: 'profile', label: 'Profile', icon: 'person-outline', iconFocused: 'person' },
 ] as const;

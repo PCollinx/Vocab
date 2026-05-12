@@ -29,6 +29,12 @@ interface AppState {
   todayWordCompleted: boolean;
   isLoadingTodayWord: boolean;
 
+  // Daily Carousel
+  dailyWords: Word[];
+  dailyWordsDate: string | null;
+  currentWordIndex: number;
+  isLoadingDailyWords: boolean;
+
   // Word Library
   fetchedWords: Word[];
   bookmarkedWords: Word[];
@@ -72,6 +78,11 @@ interface AppState {
   // Word of the Day
   fetchTodayWord: () => Promise<void>;
   markTodayWordComplete: () => void;
+
+  // Daily Carousel actions
+  fetchDailyWords: () => Promise<void>;
+  advanceToNextWord: () => void;
+  setCurrentWordIndex: (index: number) => void;
 
   // Word actions
   fetchWordDetails: (word: string) => Promise<Word | null>;
@@ -123,6 +134,10 @@ const initialState = {
   todayWordDate: null,
   todayWordCompleted: false,
   isLoadingTodayWord: false,
+  dailyWords: [],
+  dailyWordsDate: null,
+  currentWordIndex: 0,
+  isLoadingDailyWords: false,
   fetchedWords: [],
   bookmarkedWords: [],
   learnedWords: [],
@@ -230,6 +245,38 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      // ========== Daily Carousel ==========
+      fetchDailyWords: async () => {
+        const today = new Date().toISOString().split('T')[0];
+        const { dailyWordsDate, dailyWords, dailyGoal } = get();
+
+        if (dailyWordsDate === today && dailyWords.length > 0) return;
+
+        set({ isLoadingDailyWords: true });
+        try {
+          const goal = Math.max(1, dailyGoal);
+          const todayEntry = getWordForDate(new Date());
+          const extras = getRandomWords(goal + 2)
+            .filter(w => w.word !== todayEntry.word)
+            .slice(0, goal - 1);
+          const words = await getWords([todayEntry, ...extras]);
+          set({ dailyWords: words, dailyWordsDate: today, currentWordIndex: 0, isLoadingDailyWords: false });
+        } catch (error) {
+          console.error('Error fetching daily words:', error);
+          set({ isLoadingDailyWords: false });
+        }
+      },
+
+      advanceToNextWord: () => {
+        const { currentWordIndex, dailyWords } = get();
+        if (dailyWords.length === 0) return;
+        set({ currentWordIndex: (currentWordIndex + 1) % dailyWords.length });
+      },
+
+      setCurrentWordIndex: (index: number) => {
+        set({ currentWordIndex: index });
+      },
+
       // ========== Word Actions ==========
       fetchWordDetails: async (word: string) => {
         try {
@@ -299,6 +346,13 @@ export const useAppStore = create<AppState>()(
             learnedWords: [...learnedWords, newProgress],
             totalWordsLearned: totalWordsLearned + 1,
           });
+        }
+
+        // Auto-advance carousel if the learned word is the current one
+        const { dailyWords, currentWordIndex } = get();
+        const currentCarouselWord = dailyWords[currentWordIndex];
+        if (currentCarouselWord && currentCarouselWord.word.toLowerCase() === wordId.toLowerCase()) {
+          get().advanceToNextWord();
         }
 
         get().updateStreak();
@@ -583,6 +637,9 @@ export const useAppStore = create<AppState>()(
         todayWord: state.todayWord,
         todayWordDate: state.todayWordDate,
         todayWordCompleted: state.todayWordCompleted,
+        dailyWords: state.dailyWords,
+        dailyWordsDate: state.dailyWordsDate,
+        currentWordIndex: state.currentWordIndex,
         bookmarkedWords: state.bookmarkedWords,
         learnedWords: state.learnedWords,
         quizHistory: state.quizHistory,

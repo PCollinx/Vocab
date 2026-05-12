@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -8,35 +8,264 @@ import {
   Modal,
   FlatList,
   Pressable,
+  Dimensions,
+  Animated,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Container, Text, Card, Badge } from "../../src/components";
 import { colors, spacing, borderRadius } from "../../src/constants";
 import { useAppStore } from "../../src/store/appStore";
+import { Word } from "../../src/types";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const LOOP_COUNT = 100; // large enough that the user never reaches the end
+
+// ─── Per-card animated item ───────────────────────────────────────────────────
+
+interface CarouselItemProps {
+  item: Word;
+  index: number;   // index in the full looped array
+  scrollX: Animated.Value;
+  isBookmarked: boolean;
+  isLearned: boolean;
+  onNavigate: () => void;
+  onBookmark: () => void;
+}
+
+const CarouselCard = React.memo(({
+  item,
+  index,
+  scrollX,
+  isBookmarked,
+  isLearned,
+  onNavigate,
+  onBookmark,
+}: CarouselItemProps) => {
+  // Create interpolations once — stable for the lifetime of this item
+  const animations = useRef(() => {
+    const inputRange = [
+      (index - 1) * SCREEN_WIDTH,
+      index * SCREEN_WIDTH,
+      (index + 1) * SCREEN_WIDTH,
+    ];
+    return {
+      scale: scrollX.interpolate({ inputRange, outputRange: [0.91, 1, 0.91], extrapolate: "clamp" }),
+      rotateZ: scrollX.interpolate({ inputRange, outputRange: ["4deg", "0deg", "-4deg"], extrapolate: "clamp" }),
+      opacity: scrollX.interpolate({ inputRange, outputRange: [0.6, 1, 0.6], extrapolate: "clamp" }),
+    };
+  }).current();
+
+  return (
+    <View style={styles.carouselItem}>
+      <Animated.View
+        style={{
+          transform: [{ scale: animations.scale }, { rotateZ: animations.rotateZ }],
+          opacity: animations.opacity,
+        }}
+      >
+        <Card style={styles.wordCard}>
+          {isLearned && (
+            <View style={styles.learnedBanner}>
+              <Ionicons name="checkmark-circle" size={14} color={colors.correct} />
+              <Text variant="caption" style={{ color: colors.correct, fontWeight: "700" }}>
+                Learned
+              </Text>
+            </View>
+          )}
+
+          <Text variant="h2" color="heading" style={styles.wordTitle}>
+            {item.word}
+          </Text>
+
+          <View style={styles.infoRow}>
+            <Text variant="bodySmall" color="muted">Part of Speech:</Text>
+            <Badge label={item.partOfSpeech} variant="primary" />
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text variant="bodySmall" color="muted">Pronunciation:</Text>
+            <View style={styles.phonetic}>
+              <Text variant="body" color="body">{item.pronunciation || "N/A"}</Text>
+            </View>
+          </View>
+
+          <View style={styles.meaningSection}>
+            <View style={styles.sectionLabelRow}>
+              <Ionicons name="bulb" size={16} color={colors.streak} />
+              <Text variant="label" color="heading" style={styles.sectionLabel}>
+                English Meaning
+              </Text>
+            </View>
+            <Text variant="body" color="body" style={styles.definition}>
+              "{item.definition}"
+            </Text>
+          </View>
+
+          {item.example && (
+            <View style={styles.meaningSection}>
+              <View style={styles.sectionLabelRow}>
+                <Ionicons name="document-text" size={16} color={colors.primary} />
+                <Text variant="label" color="heading" style={styles.sectionLabel}>
+                  Example
+                </Text>
+              </View>
+              <Text variant="bodySmall" color="accent" style={styles.example}>
+                "{item.example}"
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={[styles.detailsBtn, isLearned && styles.detailsBtnLearned]}
+              onPress={onNavigate}
+            >
+              <Ionicons
+                name={isLearned ? "checkmark-circle-outline" : "school-outline"}
+                size={17}
+                color={colors.white}
+              />
+              <Text variant="button" style={styles.detailsBtnText}>
+                {isLearned ? "Learned" : "See Details"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.saveBtn} onPress={onBookmark}>
+              <Ionicons
+                name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                size={20}
+                color={colors.white}
+              />
+            </TouchableOpacity>
+          </View>
+        </Card>
+      </Animated.View>
+    </View>
+  );
+});
+
+// ─── Home Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const router = useRouter();
   const {
     currentStreak,
-    todayWord,
     userName,
-    isLoadingTodayWord,
-    fetchTodayWord,
     toggleBookmark,
     isWordBookmarked,
-    todayWordCompleted,
     notificationHistory,
+    dailyWords,
+    currentWordIndex,
+    isLoadingDailyWords,
+    fetchDailyWords,
+    setCurrentWordIndex,
+    learnedWords,
   } = useAppStore();
 
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
+  const [localActiveIndex, setLocalActiveIndex] = useState(0);
 
   useEffect(() => {
-    fetchTodayWord();
+    fetchDailyWords();
   }, []);
 
-  const word = todayWord;
-  const isBookmarked = word ? isWordBookmarked(word.id) : false;
+  const N = dailyWords.length;
+
+  // Build a huge looped array so the carousel never hits an edge
+  const loopedWords = useMemo(
+    () => (N > 0 ? Array.from({ length: LOOP_COUNT * N }, (_, i) => dailyWords[i % N]) : []),
+    [dailyWords, N]
+  );
+
+  // The FlatList position that represents the middle of the loop
+  const getStartIndex = useCallback(
+    (realIndex: number) => Math.floor(LOOP_COUNT / 2) * N + realIndex,
+    [N]
+  );
+
+  const flatListRef = useRef<FlatList>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const flatListIndex = useRef(0); // current index in the looped array
+  const prevStoreIndex = useRef(currentWordIndex);
+  const userScrolling = useRef(false);
+
+  // Initialise position once words load
+  useEffect(() => {
+    if (N === 0) return;
+    const startIdx = getStartIndex(currentWordIndex);
+    flatListIndex.current = startIdx;
+    scrollX.setValue(startIdx * SCREEN_WIDTH);
+    setLocalActiveIndex(currentWordIndex);
+    prevStoreIndex.current = currentWordIndex;
+
+    // FlatList needs a frame to lay out before scrollToIndex works
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToIndex({ index: startIdx, animated: false });
+    });
+  }, [N]); // run only when words first load (N goes 0 → n)
+
+  // External advance: word marked as learned on the detail screen
+  useEffect(() => {
+    if (prevStoreIndex.current === currentWordIndex || N === 0) return;
+    prevStoreIndex.current = currentWordIndex;
+
+    const nextIdx = flatListIndex.current + 1;
+    flatListIndex.current = nextIdx;
+    setLocalActiveIndex(currentWordIndex);
+    flatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
+  }, [currentWordIndex, N]);
+
+  const handleScrollBeginDrag = useCallback(() => {
+    userScrolling.current = true;
+  }, []);
+
+  const handleMomentumScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      userScrolling.current = false;
+      const x = e.nativeEvent.contentOffset.x;
+      const rawIdx = Math.round(x / SCREEN_WIDTH);
+      const realIdx = ((rawIdx % N) + N) % N;
+
+      flatListIndex.current = rawIdx;
+      setLocalActiveIndex(realIdx);
+      prevStoreIndex.current = realIdx; // prevent the store-advance effect from firing
+      setCurrentWordIndex(realIdx);
+    },
+    [N, setCurrentWordIndex]
+  );
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: SCREEN_WIDTH,
+      offset: SCREEN_WIDTH * index,
+      index,
+    }),
+    []
+  );
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: Word; index: number }) => {
+      const realIndex = index % N;
+      const word = dailyWords[realIndex] ?? item;
+      return (
+        <CarouselCard
+          item={word}
+          index={index}
+          scrollX={scrollX}
+          isBookmarked={isWordBookmarked(word.id)}
+          isLearned={learnedWords.some(
+            (w) => w.wordId.toLowerCase() === word.word.toLowerCase()
+          )}
+          onNavigate={() => router.push(`/word/${word.id}`)}
+          onBookmark={() => toggleBookmark(word)}
+        />
+      );
+    },
+    [N, dailyWords, scrollX, isWordBookmarked, learnedWords, router, toggleBookmark]
+  );
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -52,6 +281,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Hero */}
         <View style={styles.hero}>
           <View style={styles.heroPatternA} />
           <View style={styles.heroPatternB} />
@@ -60,11 +290,11 @@ export default function HomeScreen() {
             <View style={styles.userPill}>
               <View style={styles.avatar}>
                 <Text variant="caption" color="white">
-                  {userName?.charAt(0) || "👋"}
+                  {userName?.charAt(0) || "W"}
                 </Text>
               </View>
               <Text variant="bodySmall" style={styles.userPillText}>
-                {userName || "Collins"}
+                {userName || "WordWise"}
               </Text>
             </View>
 
@@ -80,24 +310,18 @@ export default function HomeScreen() {
                 style={styles.notificationBtn}
                 onPress={() => setShowNotificationHistory(true)}
               >
-                <Ionicons
-                  name="notifications-outline"
-                  size={17}
-                  color={colors.white}
-                />
-                {notificationHistory.length > 0 && (
-                  <View style={styles.notificationDot} />
-                )}
+                <Ionicons name="notifications-outline" size={17} color={colors.white} />
+                {notificationHistory.length > 0 && <View style={styles.notificationDot} />}
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.heroTextWrap}>
             <Text variant="h1" color="white" style={styles.heroTitle}>
-              Today's <Text style={styles.heroTitleAccent}>Word!</Text>
+              Today's <Text style={styles.heroTitleAccent}>Words!</Text>
             </Text>
             <Text variant="bodySmall" style={styles.heroSubtitle}>
-              One word a day keeps your vocabulary strong!
+              Swipe through your daily words — learn them all!
             </Text>
             <Text variant="caption" style={styles.heroDate}>
               {today}
@@ -105,140 +329,67 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Word Card */}
-        {isLoadingTodayWord ? (
-          <Card style={styles.wordCard}>
+        {/* Word Carousel */}
+        {isLoadingDailyWords ? (
+          <Card style={styles.singleCard}>
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text
-                variant="body"
-                color="muted"
-                style={{ marginTop: spacing[3] }}
-              >
-                Loading today's word...
+              <Text variant="body" color="muted" style={{ marginTop: spacing[3] }}>
+                Loading your words...
               </Text>
             </View>
           </Card>
-        ) : word ? (
-          <Card style={styles.wordCard}>
-            <Text variant="h2" color="heading" style={styles.wordTitle}>
-              {word.word}
-            </Text>
+        ) : N > 0 ? (
+          <View style={styles.carouselWrapper}>
+            <Animated.FlatList
+              ref={flatListRef as any}
+              data={loopedWords}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
+              initialScrollIndex={getStartIndex(currentWordIndex)}
+              getItemLayout={getItemLayout}
+              keyExtractor={(_, index) => String(index)}
+              renderItem={renderItem}
+              onScrollBeginDrag={handleScrollBeginDrag}
+              onMomentumScrollEnd={handleMomentumScrollEnd}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                { useNativeDriver: false }
+              )}
+              onScrollToIndexFailed={({ index }) => {
+                // Layout not ready yet — retry after a frame
+                requestAnimationFrame(() => {
+                  flatListRef.current?.scrollToIndex({ index, animated: false });
+                });
+              }}
+            />
 
-            <View style={styles.infoRow}>
-              <Text variant="bodySmall" color="muted">
-                Part of Speech:
-              </Text>
-              <Badge label={word.partOfSpeech} variant="primary" />
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text variant="bodySmall" color="muted">
-                Pronunciation:
-              </Text>
-              <View style={styles.phonetic}>
-                <Text variant="body" color="body">
-                  {word.pronunciation || "N/A"}
-                </Text>
-                <TouchableOpacity style={styles.speakerBtn}>
-                  <Ionicons
-                    name="volume-high"
-                    size={18}
-                    color={colors.primary}
+            {N > 1 && (
+              <View style={styles.paginationDots}>
+                {dailyWords.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[styles.dot, index === localActiveIndex && styles.dotActive]}
                   />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.meaningSection}>
-              <View style={styles.sectionLabelRow}>
-                <Ionicons name="bulb" size={16} color={colors.streak} />
-                <Text
-                  variant="label"
-                  color="heading"
-                  style={styles.sectionLabel}
-                >
-                  English Meaning
-                </Text>
-              </View>
-              <Text variant="body" color="body" style={styles.definition}>
-                "{word.definition}"
-              </Text>
-            </View>
-
-            {word.example && (
-              <View style={styles.meaningSection}>
-                <View style={styles.sectionLabelRow}>
-                  <Ionicons
-                    name="document-text"
-                    size={16}
-                    color={colors.primary}
-                  />
-                  <Text
-                    variant="label"
-                    color="heading"
-                    style={styles.sectionLabel}
-                  >
-                    Example
-                  </Text>
-                </View>
-                <Text variant="bodySmall" color="accent" style={styles.example}>
-                  "{word.example}"
-                </Text>
+                ))}
               </View>
             )}
-
-            <View style={styles.cardActions}>
-              <TouchableOpacity
-                style={styles.detailsBtn}
-                onPress={() => router.push(`/word/${word.id}`)}
-              >
-                <Ionicons
-                  name="school-outline"
-                  size={17}
-                  color={colors.white}
-                />
-                <Text variant="button" style={styles.detailsBtnText}>
-                  {todayWordCompleted ? "Learned" : "See Details"}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.saveBtn}
-                onPress={() => toggleBookmark(word)}
-              >
-                <Ionicons
-                  name={isBookmarked ? "bookmark" : "bookmark-outline"}
-                  size={20}
-                  color={colors.white}
-                />
-              </TouchableOpacity>
-            </View>
-          </Card>
+          </View>
         ) : (
-          <Card style={styles.wordCard}>
+          <Card style={styles.singleCard}>
             <View style={styles.loadingContainer}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={40}
-                color={colors.textMuted}
-              />
-              <Text
-                variant="body"
-                color="muted"
-                style={{ marginTop: spacing[3] }}
-              >
-                Unable to load word. Pull to refresh.
+              <Ionicons name="alert-circle-outline" size={40} color={colors.textMuted} />
+              <Text variant="body" color="muted" style={{ marginTop: spacing[3] }}>
+                Unable to load words. Pull to refresh.
               </Text>
             </View>
           </Card>
         )}
 
-        {/* Quick Quiz Card */}
-        <TouchableOpacity
-          style={styles.quizCard}
-          onPress={() => router.push("/quiz")}
-        >
+        {/* Quick Quiz */}
+        <TouchableOpacity style={styles.quizCard} onPress={() => router.push("/quiz")}>
           <View style={styles.quizContent}>
             <View style={styles.quizIcon}>
               <Ionicons name="bulb" size={24} color={colors.streak} />
@@ -247,11 +398,7 @@ export default function HomeScreen() {
               <Text variant="h4" color="heading" style={styles.quizTitle}>
                 Try a Quick Quiz
               </Text>
-              <Text
-                variant="bodySmall"
-                color="muted"
-                style={styles.quizSubtext}
-              >
+              <Text variant="bodySmall" color="muted" style={styles.quizSubtext}>
                 Test your brain in seconds — let's go
               </Text>
             </View>
@@ -259,27 +406,21 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
 
-        {/* Bottom spacing for tab bar */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
+      {/* Notification History Modal */}
       <Modal
         visible={showNotificationHistory}
         animationType="slide"
         transparent
         onRequestClose={() => setShowNotificationHistory(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowNotificationHistory(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowNotificationHistory(false)}>
           <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHandle} />
-
             <View style={styles.modalHeader}>
-              <Text variant="h4" color="heading">
-                Notification History
-              </Text>
+              <Text variant="h4" color="heading">Notification History</Text>
               <TouchableOpacity onPress={() => setShowNotificationHistory(false)}>
                 <Ionicons name="close" size={22} color={colors.textHeading} />
               </TouchableOpacity>
@@ -287,16 +428,8 @@ export default function HomeScreen() {
 
             {notificationHistory.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons
-                  name="notifications-off-outline"
-                  size={44}
-                  color={colors.textMuted}
-                />
-                <Text
-                  variant="body"
-                  color="muted"
-                  style={styles.emptyStateText}
-                >
+                <Ionicons name="notifications-off-outline" size={44} color={colors.textMuted} />
+                <Text variant="body" color="muted" style={styles.emptyStateText}>
                   No notifications yet
                 </Text>
                 <Text variant="bodySmall" color="muted" style={styles.emptyStateHint}>
@@ -315,25 +448,15 @@ export default function HomeScreen() {
                       <Ionicons name="book-outline" size={18} color={colors.primary} />
                     </View>
                     <View style={styles.historyText}>
-                      <Text variant="label" color="heading">
-                        {item.word}
-                      </Text>
+                      <Text variant="label" color="heading">{item.word}</Text>
                       {item.definition ? (
-                        <Text
-                          variant="bodySmall"
-                          color="muted"
-                          style={styles.historyDefinition}
-                          numberOfLines={2}
-                        >
+                        <Text variant="bodySmall" color="muted" style={styles.historyDefinition} numberOfLines={2}>
                           {item.definition}
                         </Text>
                       ) : null}
                       <Text variant="caption" color="muted" style={styles.historyTime}>
                         {new Date(item.receivedAt).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
+                          month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
                         })}
                       </Text>
                     </View>
@@ -349,12 +472,9 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 120 },
+
   hero: {
     position: "relative",
     backgroundColor: colors.primary,
@@ -367,317 +487,173 @@ const styles = StyleSheet.create({
   },
   heroPatternA: {
     position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 220,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-    top: -90,
-    right: -40,
+    width: 220, height: 220, borderRadius: 220,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
+    top: -90, right: -40,
   },
   heroPatternB: {
     position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 180,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    top: -55,
-    right: 10,
+    width: 180, height: 180, borderRadius: 180,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+    top: -55, right: 10,
   },
   headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    zIndex: 2,
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", zIndex: 2,
   },
   userPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[2],
+    flexDirection: "row", alignItems: "center", gap: spacing[2],
     backgroundColor: "rgba(255,255,255,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.28)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.28)",
     borderRadius: borderRadius.full,
-    paddingVertical: spacing[1],
-    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1], paddingHorizontal: spacing[2],
   },
-  userPillText: {
-    color: colors.white,
-    fontWeight: "600",
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[1],
-  },
+  userPillText: { color: colors.white, fontWeight: "600" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing[1] },
   avatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 22, height: 22, borderRadius: 11,
     backgroundColor: "rgba(255,255,255,0.25)",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center", alignItems: "center",
   },
   streakBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row", alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.26)",
-    paddingHorizontal: spacing[2],
-    paddingVertical: spacing[1],
-    borderRadius: borderRadius.full,
-    gap: spacing[1],
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.26)",
+    paddingHorizontal: spacing[2], paddingVertical: spacing[1],
+    borderRadius: borderRadius.full, gap: spacing[1],
   },
-  streakText: {
-    color: colors.white,
-    fontWeight: "700",
-  },
+  streakText: { color: colors.white, fontWeight: "700" },
   notificationBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
+    width: 36, height: 36, borderRadius: borderRadius.full,
     backgroundColor: "rgba(255,255,255,0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.26)",
-    justifyContent: "center",
-    alignItems: "center",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.26)",
+    justifyContent: "center", alignItems: "center",
   },
   notificationDot: {
-    position: "absolute",
-    top: 7,
-    right: 7,
-    width: 7,
-    height: 7,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.accent,
-    borderWidth: 1,
-    borderColor: colors.white,
+    position: "absolute", top: 7, right: 7,
+    width: 7, height: 7, borderRadius: borderRadius.full,
+    backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.white,
   },
   heroTextWrap: {
-    marginTop: spacing[7],
-    marginBottom: spacing[5],
-    alignItems: "center",
-    zIndex: 2,
+    marginTop: spacing[7], marginBottom: spacing[5],
+    alignItems: "center", zIndex: 2,
   },
   heroTitle: {
-    fontSize: 32,
-    textAlign: "center",
-    fontWeight: "800",
-    letterSpacing: 0.3,
-    lineHeight: 54,
+    fontSize: 32, textAlign: "center",
+    fontWeight: "800", letterSpacing: 0.3, lineHeight: 54,
   },
-  heroTitleAccent: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: colors.streak,
-  },
-  heroSubtitle: {
-    marginTop: spacing[1],
-    color: "rgba(255,255,255,0.9)",
-    textAlign: "center",
-  },
-  heroDate: {
-    marginTop: spacing[1],
-    color: "rgba(255,255,255,0.75)",
-    fontWeight: "600",
-  },
-  wordCard: {
-    marginHorizontal: spacing[4],
-    marginTop: -34,
-    marginBottom: spacing[4],
-    borderRadius: 28,
-    paddingTop: spacing[5],
+  heroTitleAccent: { fontSize: 32, fontWeight: "700", color: colors.streak },
+  heroSubtitle: { marginTop: spacing[1], color: "rgba(255,255,255,0.9)", textAlign: "center" },
+  heroDate: { marginTop: spacing[1], color: "rgba(255,255,255,0.75)", fontWeight: "600" },
+
+  singleCard: {
+    marginHorizontal: spacing[4], marginTop: -34, marginBottom: spacing[4],
+    borderRadius: 28, paddingTop: spacing[5],
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 4,
+    shadowOpacity: 0.08, shadowRadius: 24, elevation: 4,
   },
-  wordTitle: {
-    textAlign: "center",
-    marginBottom: spacing[4],
+
+  carouselWrapper: { marginTop: -34, marginBottom: spacing[2] },
+  carouselItem: { width: SCREEN_WIDTH, paddingHorizontal: spacing[4] },
+  wordCard: {
+    borderRadius: 28, paddingTop: spacing[5],
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1, shadowRadius: 24, elevation: 6,
   },
+  learnedBanner: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: spacing[1], backgroundColor: colors.correctLight,
+    paddingVertical: spacing[1], borderRadius: borderRadius.full,
+    marginBottom: spacing[3], alignSelf: "center", paddingHorizontal: spacing[4],
+  },
+  paginationDots: {
+    flexDirection: "row", justifyContent: "center",
+    gap: spacing[2], marginTop: spacing[3], marginBottom: spacing[2],
+  },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  dotActive: { width: 18, backgroundColor: colors.primary },
+
+  wordTitle: { textAlign: "center", marginBottom: spacing[4] },
   infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing[3],
-    gap: spacing[2],
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: spacing[3], gap: spacing[2],
   },
   phonetic: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row", alignItems: "center",
     backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1],
-    borderRadius: borderRadius.full,
-    gap: spacing[1],
+    paddingHorizontal: spacing[3], paddingVertical: spacing[1],
+    borderRadius: borderRadius.full, gap: spacing[1],
   },
-  speakerBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  meaningSection: {
-    marginTop: spacing[3],
-  },
+  meaningSection: { marginTop: spacing[3] },
   sectionLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing[2],
-    marginBottom: spacing[2],
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: spacing[2], marginBottom: spacing[2],
   },
   sectionLabel: {},
-  definition: {
-    fontStyle: "italic",
-    textAlign: "center",
-    color: colors.textMuted,
-  },
-  example: {
-    fontStyle: "italic",
-    textAlign: "center",
-    color: colors.textMuted,
-  },
+  definition: { fontStyle: "italic", textAlign: "center", color: colors.textMuted },
+  example: { fontStyle: "italic", textAlign: "center", color: colors.textMuted },
   cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: spacing[6],
-    gap: spacing[3],
+    flexDirection: "row", alignItems: "center", marginTop: spacing[6], gap: spacing[3],
   },
   detailsBtn: {
-    flex: 1,
-    height: 44,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.full,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing[2],
+    flex: 1, height: 44, backgroundColor: colors.primary,
+    borderRadius: borderRadius.full, flexDirection: "row",
+    alignItems: "center", justifyContent: "center", gap: spacing[2],
   },
-  detailsBtnText: {
-    color: colors.white,
-  },
+  detailsBtnLearned: { backgroundColor: colors.correct },
+  detailsBtnText: { color: colors.white },
   saveBtn: {
-    width: 44,
-    height: 44,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.full,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 44, height: 44, backgroundColor: colors.primary,
+    borderRadius: borderRadius.full, justifyContent: "center", alignItems: "center",
   },
+
   quizCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginHorizontal: spacing[4],
-    backgroundColor: colors.correctLight,
-    padding: spacing[4],
-    borderRadius: borderRadius.xl,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    marginHorizontal: spacing[4], backgroundColor: colors.correctLight,
+    padding: spacing[4], borderRadius: borderRadius.xl,
   },
-  quizContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
-  },
+  quizContent: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
   quizIcon: {
-    width: 34,
-    height: 34,
-    backgroundColor: colors.correctLight,
-    borderRadius: borderRadius.full,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 34, height: 34, backgroundColor: colors.correctLight,
+    borderRadius: borderRadius.full, justifyContent: "center", alignItems: "center",
   },
-  quizText: {
-    gap: 2,
-  },
-  quizTitle: {
-    fontSize: 24,
-  },
-  quizSubtext: {
-    color: colors.textMuted,
-  },
-  loadingContainer: {
-    padding: spacing[7],
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bottomSpacer: {
-    height: spacing[20],
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "flex-end",
-  },
+  quizText: { gap: 2 },
+  quizTitle: { fontSize: 24 },
+  quizSubtext: { color: colors.textMuted },
+
+  loadingContainer: { padding: spacing[7], alignItems: "center", justifyContent: "center" },
+  bottomSpacer: { height: spacing[20] },
+
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   modalContent: {
     backgroundColor: colors.background,
-    borderTopLeftRadius: borderRadius["3xl"],
-    borderTopRightRadius: borderRadius["3xl"],
-    paddingHorizontal: spacing[6],
-    paddingTop: spacing[3],
-    paddingBottom: spacing[8],
+    borderTopLeftRadius: borderRadius["3xl"], borderTopRightRadius: borderRadius["3xl"],
+    paddingHorizontal: spacing[6], paddingTop: spacing[3], paddingBottom: spacing[8],
     maxHeight: "75%",
   },
   modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.border,
-    alignSelf: "center",
-    marginBottom: spacing[4],
+    width: 40, height: 4, borderRadius: borderRadius.full,
+    backgroundColor: colors.border, alignSelf: "center", marginBottom: spacing[4],
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing[4],
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: spacing[4],
   },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: spacing[10],
-    gap: spacing[2],
-  },
-  emptyStateText: {
-    marginTop: spacing[2],
-  },
-  emptyStateHint: {
-    textAlign: "center",
-    paddingHorizontal: spacing[6],
-  },
-  historyList: {
-    gap: spacing[2],
-    paddingBottom: spacing[4],
-  },
+  emptyState: { alignItems: "center", paddingVertical: spacing[10], gap: spacing[2] },
+  emptyStateText: { marginTop: spacing[2] },
+  emptyStateHint: { textAlign: "center", paddingHorizontal: spacing[6] },
+  historyList: { gap: spacing[2], paddingBottom: spacing[4] },
   historyItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing[3],
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
+    flexDirection: "row", alignItems: "flex-start", gap: spacing[3],
+    backgroundColor: colors.surface, borderRadius: borderRadius.xl, padding: spacing[4],
   },
   historyIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 36, height: 36, borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight, justifyContent: "center", alignItems: "center",
   },
-  historyText: {
-    flex: 1,
-    gap: spacing[1],
-  },
-  historyDefinition: {
-    lineHeight: 18,
-  },
-  historyTime: {
-    marginTop: spacing[1],
-  },
+  historyText: { flex: 1, gap: spacing[1] },
+  historyDefinition: { lineHeight: 18 },
+  historyTime: { marginTop: spacing[1] },
 });
