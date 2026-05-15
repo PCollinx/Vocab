@@ -1,12 +1,7 @@
-/**
- * Badge Component
- * For tags, labels, and status indicators
- */
-
 import React from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
 import { Text } from "./Text";
-import { colors } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 import { spacing, borderRadius } from "../constants/spacing";
 
 type BadgeVariant =
@@ -23,20 +18,22 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-const variantStyles: Record<BadgeVariant, { bg: string; text: string }> = {
-  primary: { bg: colors.primaryLight, text: colors.primaryLightText },
-  accent: { bg: colors.accentLight, text: colors.accentLightText },
-  correct: { bg: colors.correctLight, text: colors.correctLightText },
-  wrong: { bg: colors.wrongLight, text: colors.wrongLightText },
-  streak: { bg: colors.streakLight, text: colors.streakLightText },
-  muted: { bg: colors.border, text: colors.textMuted },
-};
-
 export const Badge: React.FC<BadgeProps> = ({
   label,
   variant = "primary",
   style,
 }) => {
+  const { colors } = useTheme();
+
+  const variantStyles: Record<BadgeVariant, { bg: string; text: string }> = {
+    primary: { bg: colors.primaryLight, text: colors.primaryLightText },
+    accent: { bg: colors.accentLight, text: colors.accentLightText },
+    correct: { bg: colors.correctLight, text: colors.correctLightText },
+    wrong: { bg: colors.wrongLight, text: colors.wrongLightText },
+    streak: { bg: colors.streakLight, text: colors.streakLightText },
+    muted: { bg: colors.border, text: colors.textMuted },
+  };
+
   const { bg, text } = variantStyles[variant];
 
   return (

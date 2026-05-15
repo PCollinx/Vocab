@@ -1,19 +1,15 @@
-/**
- * App Entry Point
- * Redirects based on onboarding status
- */
-
 import { Redirect } from 'expo-router';
 import { useAppStore } from '../src/store/appStore';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors } from '../src/constants';
+import { useTheme } from '../src/context/ThemeContext';
 
 export default function Index() {
+  const { colors } = useTheme();
   const { hasCompletedOnboarding, isLoggedIn, isLoading } = useAppStore();
 
   if (isLoading) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -25,10 +21,5 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

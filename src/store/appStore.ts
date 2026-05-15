@@ -63,6 +63,9 @@ interface AppState {
     receivedAt: string;
   }[];
 
+  // Theme
+  isDarkMode: boolean;
+
   // Auth
   isLoggedIn: boolean;
   userEmail: string | null;
@@ -114,6 +117,9 @@ interface AppState {
   // Notification History actions
   addNotificationToHistory: (item: { id: string; word: string; definition: string }) => void;
 
+  // Theme actions
+  toggleDarkMode: () => void;
+
   // Auth actions
   signup: (name: string, email: string, age: number, password: string) => Promise<{ success: boolean; error?: string }>;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -150,6 +156,7 @@ const initialState = {
   reminderEnabled: true,
   reminderTime: '09:00',
   notificationHistory: [],
+  isDarkMode: false,
   isLoggedIn: false,
   userEmail: null,
   userAge: null,
@@ -584,6 +591,10 @@ export const useAppStore = create<AppState>()(
         });
       },
 
+      toggleDarkMode: () => {
+        set({ isDarkMode: !get().isDarkMode });
+      },
+
       signup: async (name, email, age, password) => {
         const { userEmail } = get();
         if (userEmail && userEmail === email) {
@@ -648,6 +659,7 @@ export const useAppStore = create<AppState>()(
         reminderEnabled: state.reminderEnabled,
         reminderTime: state.reminderTime,
         notificationHistory: state.notificationHistory,
+        isDarkMode: state.isDarkMode,
         isLoggedIn: state.isLoggedIn,
         userEmail: state.userEmail,
         userAge: state.userAge,

@@ -1,7 +1,8 @@
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
-import { colors, spacing, borderRadius } from '../constants';
+import { useTheme } from '../context/ThemeContext';
+import { spacing, borderRadius } from '../constants';
 
 interface ScreenHeaderProps {
   iconName: keyof typeof Ionicons.glyphMap;
@@ -14,15 +15,17 @@ interface ScreenHeaderProps {
 }
 
 export function ScreenHeader({ iconName, eyebrow, title, subtitle, count, countLabel, children }: ScreenHeaderProps) {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.headerTopRow}>
         <View style={styles.headerTitleWrap}>
           <View style={styles.headerEyebrowRow}>
-            <View style={styles.headerIconWrap}>
+            <View style={[styles.headerIconWrap, { backgroundColor: colors.primaryLight }]}>
               <Ionicons name={iconName} size={14} color={colors.primary} />
             </View>
-            <Text variant="caption" style={styles.headerEyebrowText}>
+            <Text variant="caption" style={[styles.headerEyebrowText, { color: colors.textMuted }]}>
               {eyebrow}
             </Text>
           </View>
@@ -34,8 +37,8 @@ export function ScreenHeader({ iconName, eyebrow, title, subtitle, count, countL
           </Text>
           {children}
         </View>
-        <View style={styles.headerCountPill}>
-          <Text variant="h4" style={styles.headerCountText}>
+        <View style={[styles.headerCountPill, { backgroundColor: colors.background }]}>
+          <Text variant="h4" style={{ color: colors.primary }}>
             {count}
           </Text>
           <Text variant="caption" color="muted">
@@ -49,13 +52,11 @@ export function ScreenHeader({ iconName, eyebrow, title, subtitle, count, countL
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius['2xl'],
     padding: spacing[4],
     marginTop: spacing[3],
     marginBottom: spacing[4],
     borderWidth: 1,
-    borderColor: colors.border,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -76,13 +77,11 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerEyebrowText: {
     letterSpacing: 0.8,
-    color: colors.textMuted,
     fontWeight: '700',
   },
   headerTitle: {
@@ -90,14 +89,10 @@ const styles = StyleSheet.create({
   },
   headerCountPill: {
     minWidth: 64,
-    backgroundColor: colors.background,
     borderRadius: borderRadius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing[2],
     paddingHorizontal: spacing[3],
-  },
-  headerCountText: {
-    color: colors.primary,
   },
 });

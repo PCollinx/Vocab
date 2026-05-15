@@ -16,18 +16,19 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Container, Text, Card, Badge } from "../../src/components";
-import { colors, spacing, borderRadius } from "../../src/constants";
+import { spacing, borderRadius } from "../../src/constants";
+import { useTheme } from "../../src/context/ThemeContext";
 import { useAppStore } from "../../src/store/appStore";
 import { Word } from "../../src/types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const LOOP_COUNT = 100; // large enough that the user never reaches the end
+const LOOP_COUNT = 100;
 
 // ─── Per-card animated item ───────────────────────────────────────────────────
 
 interface CarouselItemProps {
   item: Word;
-  index: number;   // index in the full looped array
+  index: number;
   scrollX: Animated.Value;
   isBookmarked: boolean;
   isLearned: boolean;
@@ -44,7 +45,8 @@ const CarouselCard = React.memo(({
   onNavigate,
   onBookmark,
 }: CarouselItemProps) => {
-  // Create interpolations once — stable for the lifetime of this item
+  const { colors } = useTheme();
+
   const animations = useRef(() => {
     const inputRange = [
       (index - 1) * SCREEN_WIDTH,
@@ -68,7 +70,7 @@ const CarouselCard = React.memo(({
       >
         <Card style={styles.wordCard}>
           {isLearned && (
-            <View style={styles.learnedBanner}>
+            <View style={[styles.learnedBanner, { backgroundColor: colors.correctLight }]}>
               <Ionicons name="checkmark-circle" size={14} color={colors.correct} />
               <Text variant="caption" style={{ color: colors.correct, fontWeight: "700" }}>
                 Learned
@@ -87,7 +89,7 @@ const CarouselCard = React.memo(({
 
           <View style={styles.infoRow}>
             <Text variant="bodySmall" color="muted">Pronunciation:</Text>
-            <View style={styles.phonetic}>
+            <View style={[styles.phonetic, { backgroundColor: colors.primaryLight }]}>
               <Text variant="body" color="body">{item.pronunciation || "N/A"}</Text>
             </View>
           </View>
@@ -99,7 +101,7 @@ const CarouselCard = React.memo(({
                 English Meaning
               </Text>
             </View>
-            <Text variant="body" color="body" style={styles.definition}>
+            <Text variant="body" color="muted" style={styles.definition}>
               "{item.definition}"
             </Text>
           </View>
@@ -112,7 +114,7 @@ const CarouselCard = React.memo(({
                   Example
                 </Text>
               </View>
-              <Text variant="bodySmall" color="accent" style={styles.example}>
+              <Text variant="bodySmall" color="muted" style={styles.example}>
                 "{item.example}"
               </Text>
             </View>
@@ -120,7 +122,10 @@ const CarouselCard = React.memo(({
 
           <View style={styles.cardActions}>
             <TouchableOpacity
-              style={[styles.detailsBtn, isLearned && styles.detailsBtnLearned]}
+              style={[
+                styles.detailsBtn,
+                { backgroundColor: isLearned ? colors.correct : colors.primary },
+              ]}
               onPress={onNavigate}
             >
               <Ionicons
@@ -128,12 +133,15 @@ const CarouselCard = React.memo(({
                 size={17}
                 color={colors.white}
               />
-              <Text variant="button" style={styles.detailsBtnText}>
+              <Text variant="button" style={{ color: colors.white }}>
                 {isLearned ? "Learned" : "See Details"}
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.saveBtn} onPress={onBookmark}>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+              onPress={onBookmark}
+            >
               <Ionicons
                 name={isBookmarked ? "bookmark" : "bookmark-outline"}
                 size={20}
@@ -151,6 +159,7 @@ const CarouselCard = React.memo(({
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const {
     currentStreak,
     userName,
@@ -174,13 +183,11 @@ export default function HomeScreen() {
 
   const N = dailyWords.length;
 
-  // Build a huge looped array so the carousel never hits an edge
   const loopedWords = useMemo(
     () => (N > 0 ? Array.from({ length: LOOP_COUNT * N }, (_, i) => dailyWords[i % N]) : []),
     [dailyWords, N]
   );
 
-  // The FlatList position that represents the middle of the loop
   const getStartIndex = useCallback(
     (realIndex: number) => Math.floor(LOOP_COUNT / 2) * N + realIndex,
     [N]
@@ -188,11 +195,10 @@ export default function HomeScreen() {
 
   const flatListRef = useRef<FlatList>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
-  const flatListIndex = useRef(0); // current index in the looped array
+  const flatListIndex = useRef(0);
   const prevStoreIndex = useRef(currentWordIndex);
   const userScrolling = useRef(false);
 
-  // Initialise position once words load
   useEffect(() => {
     if (N === 0) return;
     const startIdx = getStartIndex(currentWordIndex);
@@ -201,13 +207,11 @@ export default function HomeScreen() {
     setLocalActiveIndex(currentWordIndex);
     prevStoreIndex.current = currentWordIndex;
 
-    // FlatList needs a frame to lay out before scrollToIndex works
     requestAnimationFrame(() => {
       flatListRef.current?.scrollToIndex({ index: startIdx, animated: false });
     });
-  }, [N]); // run only when words first load (N goes 0 → n)
+  }, [N]);
 
-  // External advance: word marked as learned on the detail screen
   useEffect(() => {
     if (prevStoreIndex.current === currentWordIndex || N === 0) return;
     prevStoreIndex.current = currentWordIndex;
@@ -231,7 +235,7 @@ export default function HomeScreen() {
 
       flatListIndex.current = rawIdx;
       setLocalActiveIndex(realIdx);
-      prevStoreIndex.current = realIdx; // prevent the store-advance effect from firing
+      prevStoreIndex.current = realIdx;
       setCurrentWordIndex(realIdx);
     },
     [N, setCurrentWordIndex]
@@ -268,10 +272,7 @@ export default function HomeScreen() {
   );
 
   const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
+    weekday: "long", month: "long", day: "numeric", year: "numeric",
   });
 
   return (
@@ -281,7 +282,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Hero */}
+        {/* Hero — always primary blue, same in dark/light */}
         <View style={styles.hero}>
           <View style={styles.heroPatternA} />
           <View style={styles.heroPatternB} />
@@ -311,14 +312,16 @@ export default function HomeScreen() {
                 onPress={() => setShowNotificationHistory(true)}
               >
                 <Ionicons name="notifications-outline" size={17} color={colors.white} />
-                {notificationHistory.length > 0 && <View style={styles.notificationDot} />}
+                {notificationHistory.length > 0 && (
+                  <View style={[styles.notificationDot, { backgroundColor: colors.accent }]} />
+                )}
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.heroTextWrap}>
             <Text variant="h1" color="white" style={styles.heroTitle}>
-              Today's <Text style={styles.heroTitleAccent}>Words!</Text>
+              Today's <Text style={[styles.heroTitleAccent, { color: colors.streak }]}>Words!</Text>
             </Text>
             <Text variant="bodySmall" style={styles.heroSubtitle}>
               Swipe through your daily words — learn them all!
@@ -359,7 +362,6 @@ export default function HomeScreen() {
                 { useNativeDriver: false }
               )}
               onScrollToIndexFailed={({ index }) => {
-                // Layout not ready yet — retry after a frame
                 requestAnimationFrame(() => {
                   flatListRef.current?.scrollToIndex({ index, animated: false });
                 });
@@ -371,7 +373,11 @@ export default function HomeScreen() {
                 {dailyWords.map((_, index) => (
                   <View
                     key={index}
-                    style={[styles.dot, index === localActiveIndex && styles.dotActive]}
+                    style={[
+                      styles.dot,
+                      { backgroundColor: colors.border },
+                      index === localActiveIndex && { width: 18, backgroundColor: colors.primary },
+                    ]}
                   />
                 ))}
               </View>
@@ -389,9 +395,12 @@ export default function HomeScreen() {
         )}
 
         {/* Quick Quiz */}
-        <TouchableOpacity style={styles.quizCard} onPress={() => router.push("/quiz")}>
+        <TouchableOpacity
+          style={[styles.quizCard, { backgroundColor: colors.correctLight }]}
+          onPress={() => router.push("/quiz")}
+        >
           <View style={styles.quizContent}>
-            <View style={styles.quizIcon}>
+            <View style={[styles.quizIcon, { backgroundColor: colors.correctLight }]}>
               <Ionicons name="bulb" size={24} color={colors.streak} />
             </View>
             <View style={styles.quizText}>
@@ -417,8 +426,8 @@ export default function HomeScreen() {
         onRequestClose={() => setShowNotificationHistory(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotificationHistory(false)}>
-          <Pressable style={styles.modalContent} onPress={() => {}}>
-            <View style={styles.modalHandle} />
+          <Pressable style={[styles.modalContent, { backgroundColor: colors.background }]} onPress={() => {}}>
+            <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
             <View style={styles.modalHeader}>
               <Text variant="h4" color="heading">Notification History</Text>
               <TouchableOpacity onPress={() => setShowNotificationHistory(false)}>
@@ -443,8 +452,8 @@ export default function HomeScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.historyList}
                 renderItem={({ item }) => (
-                  <View style={styles.historyItem}>
-                    <View style={styles.historyIcon}>
+                  <View style={[styles.historyItem, { backgroundColor: colors.surface }]}>
+                    <View style={[styles.historyIcon, { backgroundColor: colors.primaryLight }]}>
                       <Ionicons name="book-outline" size={18} color={colors.primary} />
                     </View>
                     <View style={styles.historyText}>
@@ -477,7 +486,7 @@ const styles = StyleSheet.create({
 
   hero: {
     position: "relative",
-    backgroundColor: colors.primary,
+    backgroundColor: "#378ADD", // always primary blue — same in dark & light
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     paddingTop: spacing[4],
@@ -486,29 +495,21 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   heroPatternA: {
-    position: "absolute",
-    width: 220, height: 220, borderRadius: 220,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
-    top: -90, right: -40,
+    position: "absolute", width: 220, height: 220, borderRadius: 220,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)", top: -90, right: -40,
   },
   heroPatternB: {
-    position: "absolute",
-    width: 180, height: 180, borderRadius: 180,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
-    top: -55, right: 10,
+    position: "absolute", width: 180, height: 180, borderRadius: 180,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", top: -55, right: 10,
   },
-  headerTop: {
-    flexDirection: "row", justifyContent: "space-between",
-    alignItems: "center", zIndex: 2,
-  },
+  headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", zIndex: 2 },
   userPill: {
     flexDirection: "row", alignItems: "center", gap: spacing[2],
     backgroundColor: "rgba(255,255,255,0.18)",
     borderWidth: 1, borderColor: "rgba(255,255,255,0.28)",
-    borderRadius: borderRadius.full,
-    paddingVertical: spacing[1], paddingHorizontal: spacing[2],
+    borderRadius: borderRadius.full, paddingVertical: spacing[1], paddingHorizontal: spacing[2],
   },
-  userPillText: { color: colors.white, fontWeight: "600" },
+  userPillText: { color: "#FFFFFF", fontWeight: "600" },
   headerActions: { flexDirection: "row", alignItems: "center", gap: spacing[1] },
   avatar: {
     width: 22, height: 22, borderRadius: 11,
@@ -522,7 +523,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[2], paddingVertical: spacing[1],
     borderRadius: borderRadius.full, gap: spacing[1],
   },
-  streakText: { color: colors.white, fontWeight: "700" },
+  streakText: { color: "#FFFFFF", fontWeight: "700" },
   notificationBtn: {
     width: 36, height: 36, borderRadius: borderRadius.full,
     backgroundColor: "rgba(255,255,255,0.14)",
@@ -532,25 +533,18 @@ const styles = StyleSheet.create({
   notificationDot: {
     position: "absolute", top: 7, right: 7,
     width: 7, height: 7, borderRadius: borderRadius.full,
-    backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.white,
+    borderWidth: 1, borderColor: "#FFFFFF",
   },
-  heroTextWrap: {
-    marginTop: spacing[7], marginBottom: spacing[5],
-    alignItems: "center", zIndex: 2,
-  },
-  heroTitle: {
-    fontSize: 32, textAlign: "center",
-    fontWeight: "800", letterSpacing: 0.3, lineHeight: 54,
-  },
-  heroTitleAccent: { fontSize: 32, fontWeight: "700", color: colors.streak },
+  heroTextWrap: { marginTop: spacing[7], marginBottom: spacing[5], alignItems: "center", zIndex: 2 },
+  heroTitle: { fontSize: 32, textAlign: "center", fontWeight: "800", letterSpacing: 0.3, lineHeight: 54 },
+  heroTitleAccent: { fontSize: 32, fontWeight: "700" },
   heroSubtitle: { marginTop: spacing[1], color: "rgba(255,255,255,0.9)", textAlign: "center" },
   heroDate: { marginTop: spacing[1], color: "rgba(255,255,255,0.75)", fontWeight: "600" },
 
   singleCard: {
     marginHorizontal: spacing[4], marginTop: -34, marginBottom: spacing[4],
     borderRadius: 28, paddingTop: spacing[5],
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: "#000", shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08, shadowRadius: 24, elevation: 4,
   },
 
@@ -558,101 +552,58 @@ const styles = StyleSheet.create({
   carouselItem: { width: SCREEN_WIDTH, paddingHorizontal: spacing[4] },
   wordCard: {
     borderRadius: 28, paddingTop: spacing[5],
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: "#000", shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1, shadowRadius: 24, elevation: 6,
   },
   learnedBanner: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: spacing[1], backgroundColor: colors.correctLight,
-    paddingVertical: spacing[1], borderRadius: borderRadius.full,
+    gap: spacing[1], paddingVertical: spacing[1], borderRadius: borderRadius.full,
     marginBottom: spacing[3], alignSelf: "center", paddingHorizontal: spacing[4],
   },
   paginationDots: {
     flexDirection: "row", justifyContent: "center",
     gap: spacing[2], marginTop: spacing[3], marginBottom: spacing[2],
   },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
-  dotActive: { width: 18, backgroundColor: colors.primary },
+  dot: { width: 6, height: 6, borderRadius: 3 },
 
   wordTitle: { textAlign: "center", marginBottom: spacing[4] },
-  infoRow: {
-    flexDirection: "row", justifyContent: "space-between",
-    alignItems: "center", marginBottom: spacing[3], gap: spacing[2],
-  },
-  phonetic: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing[3], paddingVertical: spacing[1],
-    borderRadius: borderRadius.full, gap: spacing[1],
-  },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing[3], gap: spacing[2] },
+  phonetic: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing[3], paddingVertical: spacing[1], borderRadius: borderRadius.full, gap: spacing[1] },
   meaningSection: { marginTop: spacing[3] },
-  sectionLabelRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: spacing[2], marginBottom: spacing[2],
-  },
+  sectionLabelRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing[2], marginBottom: spacing[2] },
   sectionLabel: {},
-  definition: { fontStyle: "italic", textAlign: "center", color: colors.textMuted },
-  example: { fontStyle: "italic", textAlign: "center", color: colors.textMuted },
-  cardActions: {
-    flexDirection: "row", alignItems: "center", marginTop: spacing[6], gap: spacing[3],
-  },
-  detailsBtn: {
-    flex: 1, height: 44, backgroundColor: colors.primary,
-    borderRadius: borderRadius.full, flexDirection: "row",
-    alignItems: "center", justifyContent: "center", gap: spacing[2],
-  },
-  detailsBtnLearned: { backgroundColor: colors.correct },
-  detailsBtnText: { color: colors.white },
-  saveBtn: {
-    width: 44, height: 44, backgroundColor: colors.primary,
-    borderRadius: borderRadius.full, justifyContent: "center", alignItems: "center",
-  },
+  definition: { fontStyle: "italic", textAlign: "center" },
+  example: { fontStyle: "italic", textAlign: "center" },
+  cardActions: { flexDirection: "row", alignItems: "center", marginTop: spacing[6], gap: spacing[3] },
+  detailsBtn: { flex: 1, height: 44, borderRadius: borderRadius.full, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing[2] },
+  saveBtn: { width: 44, height: 44, borderRadius: borderRadius.full, justifyContent: "center", alignItems: "center" },
 
   quizCard: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    marginHorizontal: spacing[4], backgroundColor: colors.correctLight,
-    padding: spacing[4], borderRadius: borderRadius.xl,
+    marginHorizontal: spacing[4], padding: spacing[4], borderRadius: borderRadius.xl,
   },
   quizContent: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
-  quizIcon: {
-    width: 34, height: 34, backgroundColor: colors.correctLight,
-    borderRadius: borderRadius.full, justifyContent: "center", alignItems: "center",
-  },
+  quizIcon: { width: 34, height: 34, borderRadius: borderRadius.full, justifyContent: "center", alignItems: "center" },
   quizText: { gap: 2 },
   quizTitle: { fontSize: 24 },
-  quizSubtext: { color: colors.textMuted },
+  quizSubtext: {},
 
   loadingContainer: { padding: spacing[7], alignItems: "center", justifyContent: "center" },
   bottomSpacer: { height: spacing[20] },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   modalContent: {
-    backgroundColor: colors.background,
     borderTopLeftRadius: borderRadius["3xl"], borderTopRightRadius: borderRadius["3xl"],
-    paddingHorizontal: spacing[6], paddingTop: spacing[3], paddingBottom: spacing[8],
-    maxHeight: "75%",
+    paddingHorizontal: spacing[6], paddingTop: spacing[3], paddingBottom: spacing[8], maxHeight: "75%",
   },
-  modalHandle: {
-    width: 40, height: 4, borderRadius: borderRadius.full,
-    backgroundColor: colors.border, alignSelf: "center", marginBottom: spacing[4],
-  },
-  modalHeader: {
-    flexDirection: "row", justifyContent: "space-between",
-    alignItems: "center", marginBottom: spacing[4],
-  },
+  modalHandle: { width: 40, height: 4, borderRadius: borderRadius.full, alignSelf: "center", marginBottom: spacing[4] },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing[4] },
   emptyState: { alignItems: "center", paddingVertical: spacing[10], gap: spacing[2] },
   emptyStateText: { marginTop: spacing[2] },
   emptyStateHint: { textAlign: "center", paddingHorizontal: spacing[6] },
   historyList: { gap: spacing[2], paddingBottom: spacing[4] },
-  historyItem: {
-    flexDirection: "row", alignItems: "flex-start", gap: spacing[3],
-    backgroundColor: colors.surface, borderRadius: borderRadius.xl, padding: spacing[4],
-  },
-  historyIcon: {
-    width: 36, height: 36, borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight, justifyContent: "center", alignItems: "center",
-  },
+  historyItem: { flexDirection: "row", alignItems: "flex-start", gap: spacing[3], borderRadius: borderRadius.xl, padding: spacing[4] },
+  historyIcon: { width: 36, height: 36, borderRadius: borderRadius.full, justifyContent: "center", alignItems: "center" },
   historyText: { flex: 1, gap: spacing[1] },
   historyDefinition: { lineHeight: 18 },
   historyTime: { marginTop: spacing[1] },

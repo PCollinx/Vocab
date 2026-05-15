@@ -1,15 +1,11 @@
-/**
- * Word Detail Screen
- * Full word information with API data
- */
-
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Container, Text, Card, Badge, Button } from '../../src/components';
-import { colors, spacing, borderRadius } from '../../src/constants';
+import { spacing, borderRadius } from '../../src/constants';
+import { useTheme } from '../../src/context/ThemeContext';
 import { getWord } from '../../src/services';
 import { useAppStore } from '../../src/store/appStore';
 import { Word } from '../../src/types';
@@ -18,16 +14,16 @@ import { CURATED_WORDS } from '../../src/data';
 export default function WordDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
   const { toggleBookmark, isWordBookmarked, learnedWords, markWordLearned,
           fetchedWords, bookmarkedWords, todayWord } = useAppStore();
-  
+
   const [word, setWord] = useState<Word | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const player = useAudioPlayer(null);
   const playerStatus = useAudioPlayerStatus(player);
   const isPlaying = playerStatus?.playing ?? false;
-  
-  // Get curated word info if available
+
   const curatedInfo = CURATED_WORDS.find(w => w.word.toLowerCase() === id?.toLowerCase());
   const isBookmarked = id ? isWordBookmarked(id) : false;
   const isLearned = word
@@ -48,7 +44,6 @@ export default function WordDetailScreen() {
     if (!id) return;
     setIsLoading(true);
 
-    // 1. Check all store caches first — avoids an unnecessary API call
     const allCached = [
       ...fetchedWords,
       ...bookmarkedWords,
@@ -63,15 +58,11 @@ export default function WordDetailScreen() {
       return;
     }
 
-    // 2. The route id is "word-category" (e.g. "serendipity-everyday").
-    //    First try an exact match against the curated list to recover the real word name.
     const curatedMatch = CURATED_WORDS.find(w => `${w.word}-${w.category}` === id);
-
     let wordName = id;
     if (curatedMatch) {
       wordName = curatedMatch.word;
     } else {
-      // Strip a known category suffix if present
       const CATEGORIES = [
         'everyday', 'business', 'science', 'literature',
         'technology', 'arts', 'history', 'academic',
@@ -84,18 +75,13 @@ export default function WordDetailScreen() {
       }
     }
 
-    const fetchedWord = await getWord(
-      wordName,
-      curatedMatch?.category,
-      curatedMatch?.difficulty
-    );
+    const fetchedWord = await getWord(wordName, curatedMatch?.category, curatedMatch?.difficulty);
     setWord(fetchedWord);
     setIsLoading(false);
   };
 
   const playAudio = async () => {
     if (!word?.audioUrl || isPlaying) return;
-    
     try {
       if (playerStatus?.isLoaded) {
         await player.seekTo(0);
@@ -109,29 +95,16 @@ export default function WordDetailScreen() {
   };
 
   const handleMarkLearned = () => {
-    if (word) {
-      markWordLearned(word.word);
-    }
+    if (word) markWordLearned(word.word);
   };
 
   const handleBookmark = () => {
-    if (word) {
-      toggleBookmark(word);
-    }
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return colors.correct;
-      case 'intermediate': return colors.streak;
-      case 'advanced': return colors.accent;
-      default: return colors.primary;
-    }
+    if (word) toggleBookmark(word);
   };
 
   if (isLoading) {
     return (
-      <Container backgroundColor={colors.primary} statusBarStyle="light-content">
+      <Container backgroundColor={colors.primary}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.white} />
           <Text variant="body" color="white" style={{ marginTop: spacing[3] }}>
@@ -144,7 +117,7 @@ export default function WordDetailScreen() {
 
   if (!word) {
     return (
-      <Container backgroundColor={colors.primary} statusBarStyle="light-content">
+      <Container backgroundColor={colors.primary}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color={colors.white} />
@@ -172,11 +145,8 @@ export default function WordDetailScreen() {
   }
 
   return (
-    <Container backgroundColor={colors.primary} statusBarStyle="light-content">
-      <ScrollView 
-        style={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
+    <Container backgroundColor={colors.primary}>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -184,10 +154,10 @@ export default function WordDetailScreen() {
           </TouchableOpacity>
           <Text variant="label" color="white">Word Details</Text>
           <TouchableOpacity style={styles.bookmarkBtn} onPress={handleBookmark}>
-            <Ionicons 
-              name={isBookmarked ? 'bookmark' : 'bookmark-outline'} 
-              size={24} 
-              color={colors.white} 
+            <Ionicons
+              name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+              size={24}
+              color={colors.white}
             />
           </TouchableOpacity>
         </View>
@@ -204,10 +174,10 @@ export default function WordDetailScreen() {
             </Text>
             {word.audioUrl && (
               <TouchableOpacity style={styles.speakerBtn} onPress={playAudio} disabled={isPlaying}>
-                <Ionicons 
-                  name={isPlaying ? 'volume-high' : 'volume-medium'} 
-                  size={20} 
-                  color={isPlaying ? colors.streak : colors.white} 
+                <Ionicons
+                  name={isPlaying ? 'volume-high' : 'volume-medium'}
+                  size={20}
+                  color={isPlaying ? colors.streak : colors.white}
                 />
               </TouchableOpacity>
             )}
@@ -221,18 +191,14 @@ export default function WordDetailScreen() {
         </View>
 
         {/* Content Card */}
-        <View style={styles.contentCard}>
+        <View style={[styles.contentCard, { backgroundColor: colors.background }]}>
           {/* Definition */}
           <View style={styles.section}>
             <View style={styles.sectionLabelRow}>
               <Ionicons name="bulb" size={16} color={colors.streak} />
-              <Text variant="label" color="primary" style={styles.sectionLabel}>
-                Definition
-              </Text>
+              <Text variant="label" color="primary" style={styles.sectionLabel}>Definition</Text>
             </View>
-            <Text variant="bodyLarge" color="heading">
-              {word.definition}
-            </Text>
+            <Text variant="bodyLarge" color="heading">{word.definition}</Text>
           </View>
 
           {/* Example */}
@@ -240,9 +206,7 @@ export default function WordDetailScreen() {
             <View style={styles.section}>
               <View style={styles.sectionLabelRow}>
                 <Ionicons name="document-text" size={16} color={colors.primary} />
-                <Text variant="label" color="primary" style={styles.sectionLabel}>
-                  Example
-                </Text>
+                <Text variant="label" color="primary" style={styles.sectionLabel}>Example</Text>
               </View>
               <Card variant="filled" padding="md">
                 <Text variant="body" color="body" style={styles.exampleText}>
@@ -257,9 +221,7 @@ export default function WordDetailScreen() {
             <View style={styles.section}>
               <View style={styles.sectionLabelRow}>
                 <Ionicons name="swap-horizontal" size={16} color={colors.correct} />
-                <Text variant="label" color="primary" style={styles.sectionLabel}>
-                  Synonyms
-                </Text>
+                <Text variant="label" color="primary" style={styles.sectionLabel}>Synonyms</Text>
               </View>
               <View style={styles.tagContainer}>
                 {word.synonyms.slice(0, 6).map((synonym: string) => (
@@ -276,9 +238,7 @@ export default function WordDetailScreen() {
             <View style={styles.section}>
               <View style={styles.sectionLabelRow}>
                 <Ionicons name="code" size={16} color={colors.accent} />
-                <Text variant="label" color="primary" style={styles.sectionLabel}>
-                  Antonyms
-                </Text>
+                <Text variant="label" color="primary" style={styles.sectionLabel}>Antonyms</Text>
               </View>
               <View style={styles.tagContainer}>
                 {word.antonyms.slice(0, 6).map((antonym: string) => (
@@ -290,14 +250,14 @@ export default function WordDetailScreen() {
             </View>
           )}
 
-          {/* Category & Difficulty (if from curated list) */}
+          {/* Category & Difficulty */}
           {curatedInfo && (
             <View style={styles.metaRow}>
               <View style={styles.metaItem}>
                 <Text variant="caption" color="muted">Difficulty</Text>
-                <Badge 
-                  label={curatedInfo.difficulty} 
-                  variant={curatedInfo.difficulty === 'easy' ? 'correct' : curatedInfo.difficulty === 'hard' ? 'accent' : 'primary'} 
+                <Badge
+                  label={curatedInfo.difficulty}
+                  variant={curatedInfo.difficulty === 'easy' ? 'correct' : curatedInfo.difficulty === 'hard' ? 'accent' : 'primary'}
                 />
               </View>
               <View style={styles.metaItem}>
@@ -331,105 +291,37 @@ export default function WordDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing[6],
-  },
+  scroll: { flex: 1 },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing[6] },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing[4],
-    paddingHorizontal: spacing[4],
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: spacing[4], paddingHorizontal: spacing[4],
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bookmarkBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  hero: {
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[6],
-    alignItems: 'center',
-  },
-  wordTitle: {
-    marginTop: spacing[3],
-    marginBottom: spacing[2],
-  },
-  pronunciationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-  },
-  speakerBtn: {
-    padding: spacing[1],
-  },
+  backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  bookmarkBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  hero: { paddingHorizontal: spacing[4], paddingBottom: spacing[6], alignItems: 'center' },
+  wordTitle: { marginTop: spacing[3], marginBottom: spacing[2] },
+  pronunciationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  speakerBtn: { padding: spacing[1] },
   learnedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1],
+    flexDirection: 'row', alignItems: 'center', gap: spacing[1],
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1],
-    borderRadius: borderRadius.full,
-    marginTop: spacing[3],
+    paddingHorizontal: spacing[3], paddingVertical: spacing[1],
+    borderRadius: borderRadius.full, marginTop: spacing[3],
   },
   contentCard: {
     flex: 1,
-    backgroundColor: colors.background,
-    borderTopLeftRadius: borderRadius['3xl'],
-    borderTopRightRadius: borderRadius['3xl'],
-    padding: spacing[6],
-    paddingBottom: spacing[12],
+    borderTopLeftRadius: borderRadius['3xl'], borderTopRightRadius: borderRadius['3xl'],
+    padding: spacing[6], paddingBottom: spacing[12],
   },
-  section: {
-    marginBottom: spacing[6],
-  },
-  sectionLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    marginBottom: spacing[2],
-  },
+  section: { marginBottom: spacing[6] },
+  sectionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginBottom: spacing[2] },
   sectionLabel: {},
-  exampleText: {
-    fontStyle: 'italic',
-  },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: spacing[4],
-    marginBottom: spacing[6],
-  },
-  metaItem: {
-    gap: spacing[2],
-  },
-  actions: {
-    gap: spacing[3],
-    marginTop: spacing[4],
-  },
-  learnBtn: {
-    marginBottom: spacing[2],
-  },
+  exampleText: { fontStyle: 'italic' },
+  tagContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
+  metaRow: { flexDirection: 'row', gap: spacing[4], marginBottom: spacing[6] },
+  metaItem: { gap: spacing[2] },
+  actions: { gap: spacing[3], marginTop: spacing[4] },
+  learnBtn: { marginBottom: spacing[2] },
 });

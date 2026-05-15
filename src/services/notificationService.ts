@@ -17,7 +17,6 @@ let SchedulableTriggerInputTypes: typeof NotificationsType.SchedulableTriggerInp
 let notificationsAvailable = false;
 
 try {
-  // require() can be wrapped in try-catch; top-level import cannot.
   const mod = require('expo-notifications') as typeof NotificationsType;
   Notifications = mod;
   SchedulableTriggerInputTypes = mod.SchedulableTriggerInputTypes;
@@ -62,57 +61,54 @@ export async function cancelAllNotifications(): Promise<void> {
   }
 }
 
+/**
+ * Schedules 4 daily repeating reminders spaced 4 hours apart starting from
+ * reminderTime. Each slot teases one word from the user's daily carousel to
+ * draw them back into the app. Notifications repeat every day without
+ * requiring the app to be opened.
+ */
 export async function scheduleWordReminders(
   words: Word[],
-  dailyGoal: number,
   reminderTime: string
 ): Promise<boolean> {
   if (!notificationsAvailable || !Notifications || !SchedulableTriggerInputTypes) return false;
   try {
     await cancelAllNotifications();
 
-    if (!words || words.length === 0 || dailyGoal === 0) return false;
-
-    const wordsToSchedule = words.slice(0, Math.min(dailyGoal, words.length));
-    const [hours, minutes] = reminderTime.split(':').map(Number);
-    const intervalMinutes = Math.floor((8 * 60) / wordsToSchedule.length);
+    const [startHour, startMinute] = reminderTime.split(':').map(Number);
+    const SLOTS = 4;
     const notificationIds: string[] = [];
 
-    for (let i = 0; i < wordsToSchedule.length; i++) {
-      const word = wordsToSchedule[i];
-      const minuteOffset = i * intervalMinutes;
-      const notificationDate = new Date();
-      notificationDate.setHours(hours, minutes + minuteOffset, 0, 0);
+    for (let i = 0; i < SLOTS; i++) {
+      const hour = (startHour + i * 4) % 24;
 
-      if (notificationDate < new Date()) {
-        notificationDate.setDate(notificationDate.getDate() + 1);
-      }
+      // Pick a word for this slot — cycle through available words
+      const word = words.length > 0 ? words[i % words.length] : null;
+
+      const title = '📚 WordWise';
+      const body = word
+        ? `Do you know what "${word.word}" means? Open WordWise to learn today's words.`
+        : "Your daily words are waiting. Open WordWise and keep your streak alive! 🔥";
 
       try {
-        const secondsFromNow = Math.floor((notificationDate.getTime() - Date.now()) / 1000);
-        if (secondsFromNow > 0) {
-          const id = await Notifications.scheduleNotificationAsync({
-            content: {
-              title: '📚 Word of the moment!',
-              body: word.word,
-              subtitle: word.partOfSpeech,
-              data: {
-                wordId: word.id,
-                word: word.word,
-                definition: word.definition,
-                example: word.example,
-              },
-            },
-            trigger: {
-              type: SchedulableTriggerInputTypes.TIME_INTERVAL,
-              seconds: secondsFromNow,
-              repeats: false,
-            },
-          });
-          notificationIds.push(id);
-        }
+        const id = await Notifications.scheduleNotificationAsync({
+          content: {
+            title,
+            body,
+            data: word
+              ? { word: word.word, definition: word.definition }
+              : {},
+          },
+          trigger: {
+            type: SchedulableTriggerInputTypes.CALENDAR,
+            hour,
+            minute: startMinute,
+            repeats: true,
+          },
+        });
+        notificationIds.push(id);
       } catch (error) {
-        console.error(`Error scheduling notification for word ${word.word}:`, error);
+        console.error(`Error scheduling reminder slot ${i}:`, error);
       }
     }
 

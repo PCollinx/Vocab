@@ -1,35 +1,24 @@
-/**
- * Quiz Screen
- * Interactive vocabulary quiz with multiple question types
- */
-
 import { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Container, Text, Card, Button } from '../src/components';
-import { colors, spacing, borderRadius } from '../src/constants';
+import { Container, Text, Button } from '../src/components';
+import { spacing, borderRadius } from '../src/constants';
+import { useTheme } from '../src/context/ThemeContext';
 import { useAppStore } from '../src/store/appStore';
 
 export default function QuizScreen() {
   const router = useRouter();
-  const { 
-    currentQuiz, 
-    startQuiz, 
-    answerQuestion, 
-    nextQuestion, 
-    endQuiz 
-  } = useAppStore();
-  
+  const { colors } = useTheme();
+  const { currentQuiz, startQuiz, answerQuestion, nextQuestion, endQuiz } = useAppStore();
+
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const initQuiz = async () => {
-      if (!currentQuiz) {
-        await startQuiz();
-      }
+      if (!currentQuiz) await startQuiz();
       setIsLoading(false);
     };
     initQuiz();
@@ -74,7 +63,6 @@ export default function QuizScreen() {
   const isComplete = currentQuiz.isComplete;
   const progress = (currentQuiz.currentIndex + 1) / currentQuiz.totalQuestions;
 
-  // Quiz Complete Screen
   if (isComplete) {
     const percentage = Math.round((currentQuiz.score / currentQuiz.totalQuestions) * 100);
     const getMessage = () => {
@@ -98,57 +86,31 @@ export default function QuizScreen() {
           <View style={[styles.resultIcon, { backgroundColor: result.color + '20' }]}>
             <Ionicons name={result.emoji as any} size={60} color={result.color} />
           </View>
-          
-          <Text variant="h2" color="heading" style={styles.resultTitle}>
-            {result.text}
-          </Text>
-          
-          <Text variant="bodyLarge" color="muted" style={styles.resultSubtitle}>
-            You scored
-          </Text>
-          
+          <Text variant="h2" color="heading" style={styles.resultTitle}>{result.text}</Text>
+          <Text variant="bodyLarge" color="muted" style={styles.resultSubtitle}>You scored</Text>
           <View style={styles.scoreContainer}>
-            <Text variant="h1" style={{ color: result.color, fontSize: 48 }}>
-              {currentQuiz.score}
-            </Text>
-            <Text variant="h3" color="muted">
-              /{currentQuiz.totalQuestions}
-            </Text>
+            <Text variant="h1" style={{ color: result.color, fontSize: 48 }}>{currentQuiz.score}</Text>
+            <Text variant="h3" color="muted">/{currentQuiz.totalQuestions}</Text>
           </View>
-          
-          <Text variant="body" color="muted">
-            {percentage}% correct
-          </Text>
+          <Text variant="body" color="muted">{percentage}% correct</Text>
 
           <View style={styles.resultActions}>
             <Button
               title="Try Again"
-              onPress={() => {
-                endQuiz();
-                startQuiz();
-                setSelectedAnswer(null);
-                setShowResult(false);
-              }}
+              onPress={() => { endQuiz(); startQuiz(); setSelectedAnswer(null); setShowResult(false); }}
               variant="outline"
               fullWidth
               style={styles.resultBtn}
             />
-            <Button
-              title="Done"
-              onPress={handleFinish}
-              variant="primary"
-              fullWidth
-            />
+            <Button title="Done" onPress={handleFinish} variant="primary" fullWidth />
           </View>
         </View>
       </Container>
     );
   }
 
-  // Quiz Question Screen
   return (
     <Container>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleFinish} style={styles.closeBtn}>
           <Ionicons name="close" size={24} color={colors.textHeading} />
@@ -162,37 +124,29 @@ export default function QuizScreen() {
         </View>
       </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+      <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+        <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
       </View>
 
-      {/* Question */}
       <View style={styles.questionContainer}>
         <View style={styles.questionBadge}>
-          <Ionicons 
-            name={currentQuestion.type === 'multiple-choice' ? 'help-circle' : 'swap-horizontal'} 
-            size={20} 
-            color={colors.primary} 
+          <Ionicons
+            name={currentQuestion.type === 'multiple-choice' ? 'help-circle' : 'swap-horizontal'}
+            size={20}
+            color={colors.primary}
           />
           <Text variant="caption" color="primary">
             {currentQuestion.type === 'multiple-choice' ? 'Definition' : 'Synonym'}
           </Text>
         </View>
-
         <Text variant="h3" color="heading" style={styles.questionText}>
           {currentQuestion.question}
         </Text>
-
-        {/* Word Info */}
         <View style={styles.wordInfo}>
-          <Text variant="caption" color="muted">
-            {currentQuestion.word.partOfSpeech}
-          </Text>
+          <Text variant="caption" color="muted">{currentQuestion.word.partOfSpeech}</Text>
         </View>
       </View>
 
-      {/* Options */}
       <View style={styles.optionsContainer}>
         {currentQuestion.options.map((option, index) => {
           const isSelected = selectedAnswer === option;
@@ -200,62 +154,57 @@ export default function QuizScreen() {
           const showCorrect = showResult && isCorrect;
           const showWrong = showResult && isSelected && !isCorrect;
 
+          const optionBg = showCorrect
+            ? colors.correctLight
+            : showWrong
+              ? colors.accentLight
+              : isSelected
+                ? colors.primaryLight
+                : colors.surface;
+
+          const optionBorder = showCorrect
+            ? colors.correct
+            : showWrong
+              ? colors.accent
+              : isSelected
+                ? colors.primary
+                : colors.border;
+
+          const letterBg = showCorrect
+            ? colors.correct
+            : showWrong
+              ? colors.accent
+              : isSelected
+                ? colors.primary
+                : colors.border;
+
           return (
             <TouchableOpacity
               key={index}
-              style={[
-                styles.optionBtn,
-                isSelected && !showResult && styles.optionSelected,
-                showCorrect && styles.optionCorrect,
-                showWrong && styles.optionWrong,
-              ]}
+              style={[styles.optionBtn, { backgroundColor: optionBg, borderColor: optionBorder }]}
               onPress={() => handleSelectAnswer(option)}
               disabled={showResult}
             >
               <View style={styles.optionContent}>
-                <View style={[
-                  styles.optionLetter,
-                  isSelected && !showResult && styles.optionLetterSelected,
-                  showCorrect && styles.optionLetterCorrect,
-                  showWrong && styles.optionLetterWrong,
-                ]}>
-                  <Text 
-                    variant="label" 
-                    color={isSelected || showCorrect || showWrong ? 'white' : 'muted'}
-                  >
+                <View style={[styles.optionLetter, { backgroundColor: letterBg }]}>
+                  <Text variant="label" color={isSelected || showCorrect || showWrong ? 'white' : 'muted'}>
                     {String.fromCharCode(65 + index)}
                   </Text>
                 </View>
-                <Text 
-                  variant="body" 
-                  color="heading" 
-                  style={styles.optionText}
-                  numberOfLines={3}
-                >
+                <Text variant="body" color="heading" style={styles.optionText} numberOfLines={3}>
                   {option}
                 </Text>
               </View>
-              {showCorrect && (
-                <Ionicons name="checkmark-circle" size={24} color={colors.correct} />
-              )}
-              {showWrong && (
-                <Ionicons name="close-circle" size={24} color={colors.accent} />
-              )}
+              {showCorrect && <Ionicons name="checkmark-circle" size={24} color={colors.correct} />}
+              {showWrong && <Ionicons name="close-circle" size={24} color={colors.accent} />}
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Action Button */}
       <View style={styles.actionContainer}>
         {!showResult ? (
-          <Button
-            title="Check Answer"
-            onPress={handleSubmitAnswer}
-            variant="primary"
-            fullWidth
-            disabled={!selectedAnswer}
-          />
+          <Button title="Check Answer" onPress={handleSubmitAnswer} variant="primary" fullWidth disabled={!selectedAnswer} />
         ) : (
           <Button
             title={currentQuiz.currentIndex + 1 === currentQuiz.totalQuestions ? 'See Results' : 'Next Question'}
@@ -270,141 +219,27 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing[4],
-  },
-  closeBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scoreDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1],
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: borderRadius.full,
-    marginBottom: spacing[6],
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.full,
-  },
-  questionContainer: {
-    marginBottom: spacing[6],
-  },
-  questionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    marginBottom: spacing[4],
-  },
-  questionText: {
-    lineHeight: 32,
-  },
-  wordInfo: {
-    marginTop: spacing[2],
-  },
-  optionsContainer: {
-    gap: spacing[3],
-    flex: 1,
-  },
-  optionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    padding: spacing[4],
-    borderRadius: borderRadius.xl,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  optionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
-  },
-  optionCorrect: {
-    borderColor: colors.correct,
-    backgroundColor: colors.correctLight,
-  },
-  optionWrong: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentLight,
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: spacing[3],
-  },
-  optionLetter: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  optionLetterSelected: {
-    backgroundColor: colors.primary,
-  },
-  optionLetterCorrect: {
-    backgroundColor: colors.correct,
-  },
-  optionLetterWrong: {
-    backgroundColor: colors.accent,
-  },
-  optionText: {
-    flex: 1,
-  },
-  actionContainer: {
-    paddingVertical: spacing[4],
-  },
-  resultContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing[4],
-  },
-  resultIcon: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing[6],
-  },
-  resultTitle: {
-    marginBottom: spacing[2],
-  },
-  resultSubtitle: {
-    marginBottom: spacing[2],
-  },
-  scoreContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: spacing[2],
-  },
-  resultActions: {
-    width: '100%',
-    marginTop: spacing[8],
-    gap: spacing[3],
-  },
-  resultBtn: {
-    marginBottom: spacing[2],
-  },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing[4] },
+  closeBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  scoreDisplay: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
+  progressBar: { height: 6, borderRadius: borderRadius.full, marginBottom: spacing[6], overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: borderRadius.full },
+  questionContainer: { marginBottom: spacing[6] },
+  questionBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginBottom: spacing[4] },
+  questionText: { lineHeight: 32 },
+  wordInfo: { marginTop: spacing[2] },
+  optionsContainer: { gap: spacing[3], flex: 1 },
+  optionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing[4], borderRadius: borderRadius.xl, borderWidth: 2 },
+  optionContent: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: spacing[3] },
+  optionLetter: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  optionText: { flex: 1 },
+  actionContainer: { paddingVertical: spacing[4] },
+  resultContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing[4] },
+  resultIcon: { width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: spacing[6] },
+  resultTitle: { marginBottom: spacing[2] },
+  resultSubtitle: { marginBottom: spacing[2] },
+  scoreContainer: { flexDirection: 'row', alignItems: 'baseline', marginBottom: spacing[2] },
+  resultActions: { width: '100%', marginTop: spacing[8], gap: spacing[3] },
+  resultBtn: { marginBottom: spacing[2] },
 });

@@ -3,7 +3,8 @@ import { View, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } fro
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius } from '../../src/constants';
+import { spacing, borderRadius } from '../../src/constants';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Container, Text, Card } from '../../src/components';
 import { CURATED_WORDS, CATEGORY_INFO } from '../../src/data';
 import { getWords } from '../../src/services';
@@ -13,44 +14,40 @@ import { useAppStore } from '../../src/store/appStore';
 export default function CategoryScreen() {
   const { category } = useLocalSearchParams<{ category: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
   const { toggleBookmark, isWordBookmarked } = useAppStore();
-  
+
   const [words, setWords] = useState<Word[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
-  
+
   const categoryInfo = CATEGORY_INFO[category as keyof typeof CATEGORY_INFO];
   const categoryWords = CURATED_WORDS.filter(w => w.category === category);
-  
+
   useEffect(() => {
     loadWords();
   }, [category, selectedDifficulty]);
-  
+
   const loadWords = async () => {
     setIsLoading(true);
-    
     let filteredWords = categoryWords;
     if (selectedDifficulty) {
       filteredWords = filteredWords.filter(w => w.difficulty === selectedDifficulty);
     }
-    
-    // Get first 10 words with full definitions - pass objects with word property
-    const wordObjects = filteredWords.slice(0, 10).map(w => ({ 
-      word: w.word, 
-      category: w.category, 
-      difficulty: w.difficulty 
+    const wordObjects = filteredWords.slice(0, 10).map(w => ({
+      word: w.word, category: w.category, difficulty: w.difficulty,
     }));
     const fetchedWords = await getWords(wordObjects);
     setWords(fetchedWords);
     setIsLoading(false);
   };
-  
+
   const difficulties = ['easy', 'medium', 'hard'] as const;
   const difficultyCounts = difficulties.reduce((acc, diff) => {
     acc[diff] = categoryWords.filter(w => w.difficulty === diff).length;
     return acc;
   }, {} as Record<string, number>);
-  
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'easy': return colors.correct;
@@ -76,17 +73,18 @@ export default function CategoryScreen() {
               <Text variant="h2" style={styles.categoryTitle}>
                 {categoryInfo?.name || category}
               </Text>
-              <Text variant="body" color="muted">
-                {categoryWords.length} words
-              </Text>
+              <Text variant="body" color="muted">{categoryWords.length} words</Text>
             </View>
           </View>
         </View>
-        
+
         {/* Difficulty Filters */}
         <View style={styles.filterContainer}>
           <TouchableOpacity
-            style={[styles.filterChip, !selectedDifficulty && styles.filterChipActive]}
+            style={[
+              styles.filterChip,
+              { backgroundColor: !selectedDifficulty ? colors.primary : colors.surface, borderColor: !selectedDifficulty ? colors.primary : colors.border },
+            ]}
             onPress={() => setSelectedDifficulty(null)}
           >
             <Text variant="caption" color={!selectedDifficulty ? 'white' : 'body'}>
@@ -98,7 +96,7 @@ export default function CategoryScreen() {
               key={diff}
               style={[
                 styles.filterChip,
-                selectedDifficulty === diff && styles.filterChipActive
+                { backgroundColor: selectedDifficulty === diff ? colors.primary : colors.surface, borderColor: selectedDifficulty === diff ? colors.primary : colors.border },
               ]}
               onPress={() => setSelectedDifficulty(selectedDifficulty === diff ? null : diff)}
             >
@@ -109,10 +107,10 @@ export default function CategoryScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        
+
         {/* Words List */}
-        <ScrollView 
-          style={styles.scroll} 
+        <ScrollView
+          style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
@@ -134,7 +132,7 @@ export default function CategoryScreen() {
             words.map((word, index) => {
               const curatedWord = categoryWords.find(w => w.word === word.word);
               const isBookmarked = isWordBookmarked(word.word);
-              
+
               return (
                 <TouchableOpacity
                   key={word.word}
@@ -151,66 +149,57 @@ export default function CategoryScreen() {
                       </View>
                       <View style={styles.wordActions}>
                         {curatedWord && (
-                          <View style={[
-                            styles.difficultyBadge,
-                            { backgroundColor: getDifficultyColor(curatedWord.difficulty) + '20' }
-                          ]}>
-                            <Text 
-                              variant="caption" 
-                              style={{ color: getDifficultyColor(curatedWord.difficulty) }}
-                            >
+                          <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(curatedWord.difficulty) + '20' }]}>
+                            <Text variant="caption" style={{ color: getDifficultyColor(curatedWord.difficulty) }}>
                               {curatedWord.difficulty}
                             </Text>
                           </View>
                         )}
-                        <TouchableOpacity 
-                          onPress={() => toggleBookmark(word)}
-                          style={styles.bookmarkBtn}
-                        >
-                          <Ionicons 
-                            name={isBookmarked ? 'bookmark' : 'bookmark-outline'} 
-                            size={20} 
-                            color={isBookmarked ? colors.primary : colors.textMuted} 
+                        <TouchableOpacity onPress={() => toggleBookmark(word)} style={styles.bookmarkBtn}>
+                          <Ionicons
+                            name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                            size={20}
+                            color={isBookmarked ? colors.primary : colors.textMuted}
                           />
                         </TouchableOpacity>
                       </View>
                     </View>
-                    
+
                     <Text variant="body" color="muted" numberOfLines={2} style={styles.definition}>
                       {word.definition}
                     </Text>
-                    
+
                     {word.example && (
-                      <View style={styles.exampleContainer}>
+                      <View style={[styles.exampleContainer, { borderLeftColor: colors.border }]}>
                         <Ionicons name="chatbubble-outline" size={14} color={colors.textMuted} />
                         <Text variant="caption" color="muted" numberOfLines={1} style={{ flex: 1 }}>
                           "{word.example}"
                         </Text>
                       </View>
                     )}
-                    
-                    <View style={styles.cardFooter}>
-                      <Text variant="caption" color="muted">
-                        {word.partOfSpeech}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+
+                    <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
+                      <Text variant="caption" color="muted">{word.partOfSpeech}</Text>
+                      <View style={styles.wordActions}>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                      </View>
                     </View>
                   </Card>
                 </TouchableOpacity>
               );
             })
           )}
-          
+
           {!isLoading && words.length > 0 && (
             <View style={styles.loadMoreContainer}>
               <Text variant="caption" color="muted">
-                Showing {words.length} of {selectedDifficulty 
-                  ? categoryWords.filter(w => w.difficulty === selectedDifficulty).length 
+                Showing {words.length} of {selectedDifficulty
+                  ? categoryWords.filter(w => w.difficulty === selectedDifficulty).length
                   : categoryWords.length} words
               </Text>
             </View>
           )}
-          
+
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </Container>
@@ -219,127 +208,28 @@ export default function CategoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing[4],
-    gap: spacing[3],
-  },
-  backBtn: {
-    padding: spacing[2],
-    marginLeft: -spacing[2],
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[3],
-    flex: 1,
-  },
-  categoryIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryTitle: {
-    textTransform: 'capitalize',
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-    marginBottom: spacing[4],
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  difficultyDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing[10],
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing[10],
-  },
-  wordCard: {
-    marginBottom: spacing[3],
-  },
-  firstCard: {
-    marginTop: spacing[2],
-  },
-  wordHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing[2],
-  },
-  wordInfo: {
-    flex: 1,
-  },
-  wordActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-  },
-  difficultyBadge: {
-    paddingHorizontal: spacing[2],
-    paddingVertical: spacing[1],
-    borderRadius: borderRadius.sm,
-  },
-  bookmarkBtn: {
-    padding: spacing[1],
-  },
-  definition: {
-    marginBottom: spacing[2],
-  },
-  exampleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    marginBottom: spacing[3],
-    paddingLeft: spacing[2],
-    borderLeftWidth: 2,
-    borderLeftColor: colors.border,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: spacing[2],
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  loadMoreContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing[4],
-  },
-  bottomSpacer: {
-    height: spacing[10],
-  },
+  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing[4], gap: spacing[3] },
+  backBtn: { padding: spacing[2], marginLeft: -spacing[2] },
+  headerContent: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], flex: 1 },
+  categoryIconBg: { width: 48, height: 48, borderRadius: borderRadius.xl, alignItems: 'center', justifyContent: 'center' },
+  categoryTitle: { textTransform: 'capitalize' },
+  filterContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginBottom: spacing[4] },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingHorizontal: spacing[3], paddingVertical: spacing[2], borderRadius: borderRadius.full, borderWidth: 1 },
+  difficultyDot: { width: 8, height: 8, borderRadius: 4 },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 20 },
+  loadingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing[10] },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing[10] },
+  wordCard: { marginBottom: spacing[3] },
+  firstCard: { marginTop: spacing[2] },
+  wordHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing[2] },
+  wordInfo: { flex: 1 },
+  wordActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  difficultyBadge: { paddingHorizontal: spacing[2], paddingVertical: spacing[1], borderRadius: borderRadius.sm },
+  bookmarkBtn: { padding: spacing[1] },
+  definition: { marginBottom: spacing[2] },
+  exampleContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginBottom: spacing[3], paddingLeft: spacing[2], borderLeftWidth: 2 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: spacing[2], borderTopWidth: 1 },
+  loadMoreContainer: { alignItems: 'center', paddingVertical: spacing[4] },
+  bottomSpacer: { height: spacing[10] },
 });

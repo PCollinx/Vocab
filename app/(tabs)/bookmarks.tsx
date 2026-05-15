@@ -9,26 +9,25 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Container, Text, Card, Badge, ScreenHeader } from "../../src/components";
-import { colors, spacing, borderRadius } from "../../src/constants";
+import { spacing, borderRadius } from "../../src/constants";
+import { useTheme } from "../../src/context/ThemeContext";
 import { useAppStore } from "../../src/store/appStore";
 
 export default function BookmarksScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { bookmarkedWords, learnedWords } = useAppStore();
   const [query, setQuery] = useState("");
 
   const filteredBookmarks = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return bookmarkedWords;
-
-    return bookmarkedWords.filter((word) => {
-      return (
-        word.word.toLowerCase().includes(normalized) ||
-        word.definition.toLowerCase().includes(normalized) ||
-        word.partOfSpeech.toLowerCase().includes(normalized) ||
-        word.category.toLowerCase().includes(normalized)
-      );
-    });
+    return bookmarkedWords.filter((word) =>
+      word.word.toLowerCase().includes(normalized) ||
+      word.definition.toLowerCase().includes(normalized) ||
+      word.partOfSpeech.toLowerCase().includes(normalized) ||
+      word.category.toLowerCase().includes(normalized)
+    );
   }, [bookmarkedWords, query]);
 
   const learnedSet = useMemo(
@@ -57,28 +56,20 @@ export default function BookmarksScreen() {
         />
 
         <View style={styles.metricsRow}>
-          <View style={styles.metricPill}>
+          <View style={[styles.metricPill, { backgroundColor: colors.surface }]}>
             <Ionicons name="bookmark" size={14} color={colors.primary} />
-            <Text variant="caption" color="heading">
-              {bookmarkedWords.length} saved
-            </Text>
+            <Text variant="caption" color="heading">{bookmarkedWords.length} saved</Text>
           </View>
-          <View style={styles.metricPill}>
-            <Ionicons
-              name="checkmark-circle"
-              size={14}
-              color={colors.correct}
-            />
-            <Text variant="caption" color="heading">
-              {learnedWords.length} learned
-            </Text>
+          <View style={[styles.metricPill, { backgroundColor: colors.surface }]}>
+            <Ionicons name="checkmark-circle" size={14} color={colors.correct} />
+            <Text variant="caption" color="heading">{learnedWords.length} learned</Text>
           </View>
         </View>
 
-        <View style={styles.searchBar}>
+        <View style={[styles.searchBar, { backgroundColor: colors.surface }]}>
           <Ionicons name="search" size={18} color={colors.textMuted} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.textBody }]}
             placeholder="Filter saved words..."
             placeholderTextColor={colors.textMuted}
             value={query}
@@ -86,11 +77,7 @@ export default function BookmarksScreen() {
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery("")}>
-              <Ionicons
-                name="close-circle"
-                size={18}
-                color={colors.textMuted}
-              />
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -98,38 +85,22 @@ export default function BookmarksScreen() {
         {filteredBookmarks.length === 0 ? (
           <Card>
             <View style={styles.emptyState}>
-              <Ionicons
-                name="bookmark-outline"
-                size={40}
-                color={colors.textMuted}
-              />
+              <Ionicons name="bookmark-outline" size={40} color={colors.textMuted} />
               <Text variant="h4" color="heading">
-                {bookmarkedWords.length === 0
-                  ? "No bookmarks yet"
-                  : "No matches found"}
+                {bookmarkedWords.length === 0 ? "No bookmarks yet" : "No matches found"}
               </Text>
-              <Text
-                variant="bodySmall"
-                color="muted"
-                style={styles.emptySubtext}
-              >
+              <Text variant="bodySmall" color="muted" style={styles.emptySubtext}>
                 {bookmarkedWords.length === 0
                   ? "Save words from Home and Word Details to find them here."
                   : "Try searching by word, definition, or category."}
               </Text>
               {bookmarkedWords.length === 0 && (
                 <TouchableOpacity
-                  style={styles.ctaBtn}
+                  style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
                   onPress={() => router.push("/")}
                 >
-                  <Ionicons
-                    name="home-outline"
-                    size={16}
-                    color={colors.white}
-                  />
-                  <Text variant="label" color="white">
-                    Go to Home
-                  </Text>
+                  <Ionicons name="home-outline" size={16} color={colors.white} />
+                  <Text variant="label" color="white">Go to Home</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -138,11 +109,10 @@ export default function BookmarksScreen() {
           <View style={styles.list}>
             {filteredBookmarks.map((word) => {
               const isLearned = learnedSet.has(word.id.toLowerCase());
-
               return (
                 <TouchableOpacity
                   key={word.id}
-                  style={styles.wordCard}
+                  style={[styles.wordCard, { backgroundColor: colors.surface }]}
                   activeOpacity={0.85}
                   onPress={() => openWord(word.id)}
                 >
@@ -150,11 +120,7 @@ export default function BookmarksScreen() {
                     <Text variant="h4" color="heading" style={styles.wordTitle}>
                       {word.word}
                     </Text>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={18}
-                      color={colors.textMuted}
-                    />
+                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                   </View>
 
                   <Text variant="bodySmall" color="muted" numberOfLines={2}>
@@ -164,21 +130,13 @@ export default function BookmarksScreen() {
                   <View style={styles.wordMetaRow}>
                     <Badge label={word.partOfSpeech} variant="primary" />
                     <View style={styles.metaRight}>
-                      <View style={styles.categoryPill}>
-                        <Text variant="caption" color="muted">
-                          {word.category}
-                        </Text>
+                      <View style={[styles.categoryPill, { backgroundColor: colors.background }]}>
+                        <Text variant="caption" color="muted">{word.category}</Text>
                       </View>
                       {isLearned && (
-                        <View style={styles.learnedPill}>
-                          <Ionicons
-                            name="checkmark"
-                            size={12}
-                            color={colors.correct}
-                          />
-                          <Text variant="caption" style={styles.learnedText}>
-                            Learned
-                          </Text>
+                        <View style={[styles.learnedPill, { backgroundColor: colors.correctLight }]}>
+                          <Ionicons name="checkmark" size={12} color={colors.correct} />
+                          <Text variant="caption" style={{ color: colors.correct }}>Learned</Text>
                         </View>
                       )}
                     </View>
@@ -196,109 +154,36 @@ export default function BookmarksScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 50,
-  },
-  metricsRow: {
-    flexDirection: "row",
-    gap: spacing[2],
-    marginBottom: spacing[4],
-  },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 50 },
+  metricsRow: { flexDirection: "row", gap: spacing[2], marginBottom: spacing[4] },
   metricPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[1],
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.full,
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
+    flexDirection: "row", alignItems: "center", gap: spacing[1],
+    borderRadius: borderRadius.full, paddingVertical: spacing[2], paddingHorizontal: spacing[3],
   },
   searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    borderRadius: borderRadius.xl,
-    gap: spacing[3],
-    marginBottom: spacing[4],
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: spacing[4], paddingVertical: spacing[3],
+    borderRadius: borderRadius.xl, gap: spacing[3], marginBottom: spacing[4],
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.textBody,
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing[8],
-    gap: spacing[3],
-  },
-  emptySubtext: {
-    textAlign: "center",
-    maxWidth: 260,
-  },
+  searchInput: { flex: 1, fontSize: 16 },
+  emptyState: { alignItems: "center", justifyContent: "center", paddingVertical: spacing[8], gap: spacing[3] },
+  emptySubtext: { textAlign: "center", maxWidth: 260 },
   ctaBtn: {
-    marginTop: spacing[2],
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[2],
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[2],
+    marginTop: spacing[2], flexDirection: "row", alignItems: "center",
+    gap: spacing[2], borderRadius: borderRadius.full,
+    paddingHorizontal: spacing[4], paddingVertical: spacing[2],
   },
-  list: {
-    gap: spacing[3],
-  },
-  wordCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
-    gap: spacing[3],
-  },
-  wordTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  wordTitle: {
-    flex: 1,
-    marginRight: spacing[2],
-  },
-  wordMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing[2],
-  },
-  metaRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[2],
-  },
-  categoryPill: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1],
-  },
+  list: { gap: spacing[3] },
+  wordCard: { borderRadius: borderRadius.xl, padding: spacing[4], gap: spacing[3] },
+  wordTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  wordTitle: { flex: 1, marginRight: spacing[2] },
+  wordMetaRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing[2] },
+  metaRight: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  categoryPill: { borderRadius: borderRadius.full, paddingHorizontal: spacing[3], paddingVertical: spacing[1] },
   learnedPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: colors.correctLight,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing[2],
-    paddingVertical: spacing[1],
+    flexDirection: "row", alignItems: "center", gap: 2,
+    borderRadius: borderRadius.full, paddingHorizontal: spacing[2], paddingVertical: spacing[1],
   },
-  learnedText: {
-    color: colors.correct,
-  },
-  bottomSpacer: {
-    height: spacing[20],
-  },
+  bottomSpacer: { height: spacing[20] },
 });

@@ -1,12 +1,6 @@
-/**
- * ProgressBar Component
- * Visual progress indicator
- */
-
 import React from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
-import { colors } from "../constants/colors";
-import { borderRadius } from "../constants/spacing";
+import { useTheme } from "../context/ThemeContext";
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
@@ -18,18 +12,21 @@ interface ProgressBarProps {
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   progress,
-  color = colors.primary,
-  backgroundColor = colors.border,
+  color,
+  backgroundColor,
   height = 8,
   style,
 }) => {
+  const { colors } = useTheme();
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
+  const fillColor = color ?? colors.primary;
+  const bgColor = backgroundColor ?? colors.border;
 
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor, height, borderRadius: height / 2 },
+        { backgroundColor: bgColor, height, borderRadius: height / 2 },
         style,
       ]}
     >
@@ -37,7 +34,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         style={[
           styles.fill,
           {
-            backgroundColor: color,
+            backgroundColor: fillColor,
             width: `${clampedProgress * 100}%`,
             borderRadius: height / 2,
           },
@@ -48,11 +45,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    width: "100%",
-    overflow: "hidden",
-  },
-  fill: {
-    height: "100%",
-  },
+  container: { width: "100%", overflow: "hidden" },
+  fill: { height: "100%" },
 });

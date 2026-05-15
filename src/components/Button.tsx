@@ -1,18 +1,13 @@
-/**
- * Button Component
- * Primary CTA and secondary actions
- */
-
 import React from "react";
 import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
-  TextStyle,
 } from "react-native";
 import { Text } from "./Text";
-import { colors } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
+import { Colors } from "../constants/colors";
 import { spacing, borderRadius } from "../constants/spacing";
 
 type ButtonVariant = "primary" | "secondary" | "outline" | "ghost";
@@ -31,6 +26,17 @@ interface ButtonProps {
   style?: ViewStyle;
 }
 
+function getTextColor(variant: ButtonVariant, disabled: boolean, colors: Colors): string {
+  if (disabled) return colors.textMuted;
+  switch (variant) {
+    case "primary": return colors.primaryText;
+    case "secondary": return colors.primary;
+    case "outline": return colors.primary;
+    case "ghost": return colors.textBody;
+    default: return colors.primaryText;
+  }
+}
+
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
@@ -43,18 +49,28 @@ export const Button: React.FC<ButtonProps> = ({
   iconPosition = "left",
   style,
 }) => {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
+
+  const variantContainerStyle: ViewStyle =
+    variant === "primary"
+      ? { backgroundColor: colors.primary, borderRadius: borderRadius.xl }
+      : variant === "secondary"
+        ? { backgroundColor: colors.primaryLight, borderRadius: borderRadius.xl }
+        : variant === "outline"
+          ? { backgroundColor: "transparent", borderWidth: 2, borderColor: colors.primary, borderRadius: borderRadius.xl }
+          : { backgroundColor: "transparent" };
 
   const containerStyles: ViewStyle[] = [
     styles.base,
-    styles[`${variant}Container`],
+    variantContainerStyle,
     styles[`${size}Container`],
-    fullWidth && styles.fullWidth,
-    isDisabled && styles.disabled,
+    fullWidth ? styles.fullWidth : undefined,
+    isDisabled ? styles.disabled : undefined,
     style,
   ].filter(Boolean) as ViewStyle[];
 
-  const textColor = getTextColor(variant, isDisabled);
+  const textColor = getTextColor(variant, isDisabled, colors);
 
   return (
     <TouchableOpacity
@@ -73,9 +89,7 @@ export const Button: React.FC<ButtonProps> = ({
             style={[
               { color: textColor },
               icon && iconPosition === "left" ? styles.textWithLeftIcon : null,
-              icon && iconPosition === "right"
-                ? styles.textWithRightIcon
-                : null,
+              icon && iconPosition === "right" ? styles.textWithRightIcon : null,
             ]}
           >
             {title}
@@ -85,23 +99,6 @@ export const Button: React.FC<ButtonProps> = ({
       )}
     </TouchableOpacity>
   );
-};
-
-const getTextColor = (variant: ButtonVariant, disabled: boolean): string => {
-  if (disabled) return colors.textMuted;
-
-  switch (variant) {
-    case "primary":
-      return colors.primaryText;
-    case "secondary":
-      return colors.primary;
-    case "outline":
-      return colors.primary;
-    case "ghost":
-      return colors.textBody;
-    default:
-      return colors.primaryText;
-  }
 };
 
 const styles = StyleSheet.create({
@@ -116,27 +113,6 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
-
-  // Variants
-  primaryContainer: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.xl,
-  },
-  secondaryContainer: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: borderRadius.xl,
-  },
-  outlineContainer: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderRadius: borderRadius.xl,
-  },
-  ghostContainer: {
-    backgroundColor: "transparent",
-  },
-
-  // Sizes
   smContainer: {
     paddingVertical: spacing[2],
     paddingHorizontal: spacing[4],
@@ -152,8 +128,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[8],
     minHeight: 56,
   },
-
-  // Icon spacing
   textWithLeftIcon: {
     marginLeft: spacing[2],
   },

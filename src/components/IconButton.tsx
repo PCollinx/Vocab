@@ -1,12 +1,7 @@
-/**
- * Icon Button Component
- * Circular button for icons
- */
-
 import React from "react";
 import { TouchableOpacity, StyleSheet, ViewStyle } from "react-native";
-import { colors } from "../constants/colors";
-import { spacing, borderRadius, shadows } from "../constants/spacing";
+import { useTheme } from "../context/ThemeContext";
+import { borderRadius, shadows } from "../constants/spacing";
 
 type IconButtonVariant = "primary" | "secondary" | "ghost" | "elevated";
 type IconButtonSize = "sm" | "md" | "lg";
@@ -28,11 +23,22 @@ export const IconButton: React.FC<IconButtonProps> = ({
   disabled = false,
   style,
 }) => {
+  const { colors } = useTheme();
+
+  const variantStyle: ViewStyle =
+    variant === "primary"
+      ? { backgroundColor: colors.primary }
+      : variant === "secondary"
+        ? { backgroundColor: colors.primaryLight }
+        : variant === "elevated"
+          ? { backgroundColor: colors.surface, ...(shadows.md as ViewStyle) }
+          : { backgroundColor: "transparent" };
+
   return (
     <TouchableOpacity
       style={[
         styles.base,
-        styles[variant],
+        variantStyle,
         styles[`size_${size}`],
         disabled && styles.disabled,
         style,
@@ -47,41 +53,9 @@ export const IconButton: React.FC<IconButtonProps> = ({
 };
 
 const styles = StyleSheet.create({
-  base: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: borderRadius.full,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-
-  // Variants
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.primaryLight,
-  },
-  ghost: {
-    backgroundColor: "transparent",
-  },
-  elevated: {
-    backgroundColor: colors.surface,
-    ...shadows.md,
-  },
-
-  // Sizes
-  size_sm: {
-    width: 32,
-    height: 32,
-  },
-  size_md: {
-    width: 44,
-    height: 44,
-  },
-  size_lg: {
-    width: 56,
-    height: 56,
-  },
+  base: { alignItems: "center", justifyContent: "center", borderRadius: borderRadius.full },
+  disabled: { opacity: 0.5 },
+  size_sm: { width: 32, height: 32 },
+  size_md: { width: 44, height: 44 },
+  size_lg: { width: 56, height: 56 },
 });

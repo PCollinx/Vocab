@@ -2,13 +2,15 @@ import { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, Text, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../constants';
+import { useTheme } from '../context/ThemeContext';
+import { Colors } from '../constants/colors';
 
 interface TabIconProps {
   label: string;
   focused: boolean;
   iconName: keyof typeof Ionicons.glyphMap;
   iconNameFocused: keyof typeof Ionicons.glyphMap;
+  colors: Colors;
 }
 
 const TAB_CONFIG = [
@@ -18,7 +20,7 @@ const TAB_CONFIG = [
   { name: 'profile', label: 'Profile', icon: 'person-outline', iconFocused: 'person' },
 ] as const;
 
-function TabIcon({ label, focused, iconName, iconNameFocused }: TabIconProps) {
+function TabIcon({ label, focused, iconName, iconNameFocused, colors }: TabIconProps) {
   const animatedValue = useRef(new Animated.Value(focused ? 1 : 0)).current;
   const [measuredLabelWidth, setMeasuredLabelWidth] = useState(0);
 
@@ -60,7 +62,7 @@ function TabIcon({ label, focused, iconName, iconNameFocused }: TabIconProps) {
       <Ionicons
         name={focused ? iconNameFocused : iconName}
         size={20}
-        color={focused ? colors.white : colors.textMuted}
+        color={focused ? colors.white : colors.textBody}
       />
       <Animated.View
         style={[
@@ -89,6 +91,9 @@ function TabIcon({ label, focused, iconName, iconNameFocused }: TabIconProps) {
 
 export function AnimatedTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+
+  const tabBarBg = isDark ? colors.surfaceElevated : colors.textHeading;
 
   return (
     <View
@@ -97,7 +102,7 @@ export function AnimatedTabBar({ state, descriptors, navigation }: any) {
         { paddingBottom: insets.bottom > 0 ? insets.bottom - 10 : 8 },
       ]}
     >
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: tabBarBg }]}>
         {state.routes.map((route: any, index: number) => {
           const tab = TAB_CONFIG.find(t => t.name === route.name);
           if (!tab) return null;
@@ -123,6 +128,7 @@ export function AnimatedTabBar({ state, descriptors, navigation }: any) {
                 focused={isFocused}
                 iconName={tab.icon as keyof typeof Ionicons.glyphMap}
                 iconNameFocused={tab.iconFocused as keyof typeof Ionicons.glyphMap}
+                colors={colors}
               />
             </Pressable>
           );
@@ -143,7 +149,6 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     height: 62,
-    backgroundColor: colors.textHeading,
     borderRadius: 32,
     paddingHorizontal: 2,
     alignItems: 'center',
@@ -173,7 +178,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tabLabel: {
-    color: colors.white,
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
   },

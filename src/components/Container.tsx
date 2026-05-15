@@ -1,12 +1,7 @@
-/**
- * Container Component
- * Screen wrapper with safe area and background
- */
-
 import React from "react";
-import { View, StyleSheet, ViewStyle, StatusBar } from "react-native";
+import { View, StyleSheet, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 import { spacing } from "../constants/spacing";
 
 interface ContainerProps {
@@ -15,7 +10,6 @@ interface ContainerProps {
   padded?: boolean;
   safeArea?: boolean;
   backgroundColor?: string;
-  statusBarStyle?: "light-content" | "dark-content";
 }
 
 export const Container: React.FC<ContainerProps> = ({
@@ -23,14 +17,14 @@ export const Container: React.FC<ContainerProps> = ({
   style,
   padded = true,
   safeArea = true,
-  backgroundColor = colors.background,
-  statusBarStyle = "dark-content",
+  backgroundColor,
 }) => {
+  const { colors } = useTheme();
   const Wrapper = safeArea ? SafeAreaView : View;
+  const bg = backgroundColor ?? colors.background;
 
   return (
-    <Wrapper style={[styles.container, { backgroundColor }, style]}>
-      <StatusBar barStyle={statusBarStyle} />
+    <Wrapper style={[styles.container, { backgroundColor: bg }, style]}>
       <View style={[styles.content, padded && styles.padded]}>{children}</View>
     </Wrapper>
   );

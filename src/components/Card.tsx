@@ -1,11 +1,6 @@
-/**
- * Card Component
- * Container for content with elevation and styling
- */
-
 import React from "react";
 import { View, StyleSheet, ViewStyle, StyleProp } from "react-native";
-import { colors } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 import { spacing, borderRadius, shadows } from "../constants/spacing";
 
 type CardVariant = "elevated" | "outlined" | "filled";
@@ -24,11 +19,20 @@ export const Card: React.FC<CardProps> = ({
   padding = "md",
   style,
 }) => {
+  const { colors } = useTheme();
+
+  const variantStyle: ViewStyle =
+    variant === "elevated"
+      ? { backgroundColor: colors.surface, ...(shadows.md as ViewStyle) }
+      : variant === "outlined"
+        ? { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }
+        : { backgroundColor: colors.primaryLight };
+
   return (
     <View
       style={[
         styles.base,
-        styles[variant],
+        variantStyle,
         styles[`padding_${padding}`],
         style,
       ]}
@@ -43,32 +47,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     overflow: "hidden",
   },
-
-  // Variants
-  elevated: {
-    backgroundColor: colors.surface,
-    ...shadows.md,
-  },
-  outlined: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filled: {
-    backgroundColor: colors.primaryLight,
-  },
-
-  // Padding
-  padding_none: {
-    padding: 0,
-  },
-  padding_sm: {
-    padding: spacing[3],
-  },
-  padding_md: {
-    padding: spacing[4],
-  },
-  padding_lg: {
-    padding: spacing[6],
-  },
+  padding_none: { padding: 0 },
+  padding_sm: { padding: spacing[3] },
+  padding_md: { padding: spacing[4] },
+  padding_lg: { padding: spacing[6] },
 });

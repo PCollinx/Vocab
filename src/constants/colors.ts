@@ -1,6 +1,6 @@
 /**
  * Vocabulary App — Sky & Coral Color System
- * For kids/teens · Premium & confident feel
+ * Supports light and dark themes.
  */
 
 // Sky blue ramp (Primary)
@@ -58,58 +58,132 @@ export const gray = {
   900: "#2C2C2A",
 } as const;
 
-// Semantic design tokens
-export const colors = {
-  // Primary — buttons, active nav, CTAs
+// ─── Shared colour interface ──────────────────────────────────────────────────
+
+export interface Colors {
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  primaryText: string;
+  primaryLightText: string;
+  accent: string;
+  accentLight: string;
+  accentText: string;
+  accentLightText: string;
+  correct: string;
+  correctLight: string;
+  correctText: string;
+  correctLightText: string;
+  streak: string;
+  streakLight: string;
+  streakText: string;
+  streakLightText: string;
+  wrong: string;
+  wrongLight: string;
+  wrongText: string;
+  wrongLightText: string;
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  textHeading: string;
+  textBody: string;
+  textMuted: string;
+  textHint: string;
+  border: string;
+  borderStrong: string;
+  white: string;
+  black: string;
+  transparent: string;
+}
+
+// ─── Light theme ─────────────────────────────────────────────────────────────
+
+export const colors: Colors = {
   primary: blue[400],
   primaryLight: blue[50],
   primaryDark: blue[600],
   primaryText: blue[50],
   primaryLightText: blue[800],
 
-  // Accent — coral highlights, warm moments
   accent: coral[400],
   accentLight: coral[50],
   accentText: coral[50],
   accentLightText: coral[800],
 
-  // Correct answer / mastered word
   correct: green[400],
   correctLight: green[50],
   correctText: green[50],
   correctLightText: green[800],
 
-  // Streak / XP / reward
   streak: amber[200],
   streakLight: amber[50],
   streakText: amber[50],
   streakLightText: amber[800],
 
-  // Wrong answer (uses coral, keeps tone warm not harsh)
   wrong: coral[400],
   wrongLight: coral[50],
   wrongText: coral[50],
   wrongLightText: coral[600],
 
-  // Surfaces & backgrounds
   background: gray[50],
   surface: "#FFFFFF",
   surfaceElevated: "#FFFFFF",
 
-  // Typography
   textHeading: gray[900],
   textBody: gray[600],
   textMuted: gray[400],
   textHint: gray[200],
 
-  // Borders
   border: gray[100],
   borderStrong: gray[400],
 
-  // Common
   white: "#FFFFFF",
   black: "#000000",
   transparent: "transparent",
-} as const;
+};
 
-export type Colors = typeof colors;
+// ─── Dark theme ───────────────────────────────────────────────────────────────
+
+export const darkColors: Colors = {
+  primary: blue[400],
+  primaryLight: "#162035",
+  primaryDark: blue[600],
+  primaryText: blue[50],
+  primaryLightText: blue[200],
+
+  accent: coral[200],
+  accentLight: "#2D1610",
+  accentText: coral[50],
+  accentLightText: coral[200],
+
+  correct: green[200],
+  correctLight: "#112310",
+  correctText: green[50],
+  correctLightText: green[200],
+
+  streak: amber[200],
+  streakLight: "#271C05",
+  streakText: amber[50],
+  streakLightText: amber[200],
+
+  wrong: coral[200],
+  wrongLight: "#2D1610",
+  wrongText: coral[50],
+  wrongLightText: coral[200],
+
+  background: "#111218",
+  surface: "#1C1D26",
+  surfaceElevated: "#252630",
+
+  textHeading: "#EDEEF5",
+  textBody: "#9192A3",
+  textMuted: "#7C7E96",
+  textHint: "#52546A",
+
+  border: "#252632",
+  borderStrong: "#3E3F54",
+
+  white: "#FFFFFF",
+  black: "#000000",
+  transparent: "transparent",
+};
