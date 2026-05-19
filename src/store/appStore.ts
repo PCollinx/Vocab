@@ -169,10 +169,7 @@ export const useAppStore = create<AppState>()(
       ...initialState,
 
       loadUserData: async () => {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        set({ isLoading: false });
         get().checkAndUpdateStreak();
-        // Fetch today's word if needed
         get().fetchTodayWord();
       },
 
@@ -637,6 +634,9 @@ export const useAppStore = create<AppState>()(
     {
       name: "wordwise-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) state.isLoading = false;
+      },
       partialize: (state) => ({
         userName: state.userName,
         hasCompletedOnboarding: state.hasCompletedOnboarding,

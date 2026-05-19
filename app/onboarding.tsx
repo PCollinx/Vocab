@@ -1,21 +1,27 @@
 import { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Container, Text, Button } from '../src/components';
+import LottieView from 'lottie-react-native';
+import { Text, Button } from '../src/components';
 import { spacing, borderRadius } from '../src/constants';
 import { useTheme } from '../src/context/ThemeContext';
 import { useAppStore } from '../src/store/appStore';
 
-const { width } = Dimensions.get('window');
-
 const GOAL_OPTIONS = [3, 5, 7, 10];
 
 const slides = [
-  { id: 1, title: 'Daily words.', highlight: 'Lifelong impact!', subtitle: 'Your daily dose of vocabulary.', icon: 'bulb' as const, type: 'info' },
-  { id: 2, title: 'Make every day', highlight: 'a learning journey', subtitle: 'An engaging way to master new words and expand your knowledge.', icon: 'globe' as const, type: 'info' },
-  { id: 3, title: 'Track your', highlight: 'progress!', subtitle: 'Build streaks, earn achievements, and watch yourself grow.', icon: 'trending-up' as const, type: 'info' },
-  { id: 4, title: 'Set your', highlight: 'daily goal!', subtitle: 'How many words would you like to learn each day?', icon: 'trophy' as const, type: 'goal' },
+  { id: 1, title: 'Daily words.', highlight: 'Lifelong impact!', subtitle: 'Your daily dose of vocabulary.', type: 'info' },
+  { id: 2, title: 'Make every day', highlight: 'a learning journey', subtitle: 'An engaging way to master new words and expand your knowledge.', type: 'info' },
+  { id: 3, title: 'Track your', highlight: 'progress!', subtitle: 'Build streaks, earn achievements, and watch yourself grow.', type: 'info' },
+  { id: 4, title: 'Set your', highlight: 'daily goal!', subtitle: 'How many words would you like to learn each day?', type: 'goal' },
+];
+
+const LOTTIE_SOURCES = [
+  require('../assets/learning.json'),
+  require('../assets/book.json'),
+  require('../assets/progress.json'),
+  require('../assets/Trophy.json'),
 ];
 
 export default function OnboardingScreen() {
@@ -46,9 +52,12 @@ export default function OnboardingScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Section with Illustration */}
       <View style={[styles.illustrationContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.emojiContainer, { backgroundColor: colors.primaryLight }]}>
-          <Ionicons name={slide.icon} size={60} color={colors.primary} />
-        </View>
+        <LottieView
+          source={LOTTIE_SOURCES[currentSlide]}
+          autoPlay
+          loop
+          style={styles.lottie}
+        />
       </View>
 
       {/* Bottom Section with Content — always primary blue */}
@@ -116,7 +125,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   illustrationContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emojiContainer: { width: 150, height: 150, borderRadius: 75, justifyContent: 'center', alignItems: 'center' },
+  lottie: { width: 260, height: 260 },
   contentContainer: {
     backgroundColor: '#378ADD', // always primary blue — consistent onboarding feel
     borderTopLeftRadius: borderRadius['3xl'],
