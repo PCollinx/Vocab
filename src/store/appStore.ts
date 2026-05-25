@@ -51,6 +51,7 @@ interface AppState {
 
   // User Settings
   userAvatar: string | null;
+  userBio: string;
   dailyGoal: number;
   reminderEnabled: boolean;
   reminderTime: string;
@@ -124,7 +125,7 @@ interface AppState {
   signup: (name: string, email: string, age: number, password: string) => Promise<{ success: boolean; error?: string }>;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  updateProfile: (updates: { name?: string; email?: string; age?: number; newPassword?: string; currentPassword: string }) => { success: boolean; error?: string };
+  updateProfile: (updates: { name?: string; bio?: string; email?: string; age?: number; newPassword?: string; currentPassword: string }) => { success: boolean; error?: string };
 }
 
 const initialState = {
@@ -152,6 +153,7 @@ const initialState = {
   searchQuery: "",
   searchResults: [],
   isSearching: false,  userAvatar: null,
+  userBio: 'Vocabulary enthusiast',
   dailyGoal: 5,
   reminderEnabled: true,
   reminderTime: '09:00',
@@ -236,7 +238,7 @@ export const useAppStore = create<AppState>()(
             });
           }
         } catch (error) {
-          console.error("Error fetching today word:", error);
+          if (__DEV__) console.error("Error fetching today word:", error);
           set({ isLoadingTodayWord: false });
         }
       },
@@ -266,7 +268,7 @@ export const useAppStore = create<AppState>()(
           const words = await getWords([todayEntry, ...extras]);
           set({ dailyWords: words, dailyWordsDate: today, currentWordIndex: 0, isLoadingDailyWords: false });
         } catch (error) {
-          console.error('Error fetching daily words:', error);
+          if (__DEV__) console.error('Error fetching daily words:', error);
           set({ isLoadingDailyWords: false });
         }
       },
@@ -294,7 +296,7 @@ export const useAppStore = create<AppState>()(
           }
           return fetchedWord;
         } catch (error) {
-          console.error("Error fetching word:", error);
+          if (__DEV__) console.error("Error fetching word:", error);
           return null;
         }
       },
@@ -426,7 +428,7 @@ export const useAppStore = create<AppState>()(
         }
 
         if (quizWords.length < 4) {
-          console.error("Not enough words for quiz");
+          if (__DEV__) console.error("Not enough words for quiz");
           return;
         }
 
@@ -617,13 +619,14 @@ export const useAppStore = create<AppState>()(
         set({ isLoggedIn: false });
       },
 
-      updateProfile: ({ name, email, age, newPassword, currentPassword }) => {
+      updateProfile: ({ name, bio, email, age, newPassword, currentPassword }) => {
         const { userPassword } = get();
         if (userPassword !== currentPassword) {
           return { success: false, error: 'Current password is incorrect.' };
         }
         const updates: Partial<AppState> = {};
         if (name !== undefined) updates.userName = name;
+        if (bio !== undefined) updates.userBio = bio;
         if (email !== undefined) updates.userEmail = email;
         if (age !== undefined) updates.userAge = age;
         if (newPassword) updates.userPassword = newPassword;
@@ -655,6 +658,7 @@ export const useAppStore = create<AppState>()(
         learnedWords: state.learnedWords,
         quizHistory: state.quizHistory,
         userAvatar: state.userAvatar,
+        userBio: state.userBio,
         dailyGoal: state.dailyGoal,
         reminderEnabled: state.reminderEnabled,
         reminderTime: state.reminderTime,

@@ -33,13 +33,20 @@ try {
 
   notificationsAvailable = true;
 } catch {
-  console.warn(
-    'expo-notifications: not available in this environment. ' +
-      'Use a development build for full notification support.'
-  );
+  if (__DEV__) console.warn('expo-notifications: not available in this environment. Use a development build for full notification support.');
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
+
+export async function getNotificationPermissionStatus(): Promise<string | null> {
+  if (!notificationsAvailable || !Notifications) return null;
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status;
+  } catch {
+    return null;
+  }
+}
 
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!notificationsAvailable || !Notifications) return false;
@@ -47,7 +54,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
     const { status } = await Notifications.requestPermissionsAsync();
     return status === 'granted';
   } catch (error) {
-    console.error('Error requesting notification permissions:', error);
+    if (__DEV__) console.error('Error requesting notification permissions:', error);
     return false;
   }
 }
@@ -57,7 +64,7 @@ export async function cancelAllNotifications(): Promise<void> {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
   } catch (error) {
-    console.error('Error canceling notifications:', error);
+    if (__DEV__) console.error('Error canceling notifications:', error);
   }
 }
 
@@ -108,13 +115,13 @@ export async function scheduleWordReminders(
         });
         notificationIds.push(id);
       } catch (error) {
-        console.error(`Error scheduling reminder slot ${i}:`, error);
+        if (__DEV__) console.error(`Error scheduling reminder slot ${i}:`, error);
       }
     }
 
     return notificationIds.length > 0;
   } catch (error) {
-    console.error('Error scheduling word reminders:', error);
+    if (__DEV__) console.error('Error scheduling word reminders:', error);
     return false;
   }
 }
@@ -139,7 +146,7 @@ export async function scheduleTestNotification(
       },
     });
   } catch (error) {
-    console.error('Error scheduling test notification:', error);
+    if (__DEV__) console.error('Error scheduling test notification:', error);
     return null;
   }
 }
@@ -151,7 +158,7 @@ export async function getAllScheduledNotifications(): Promise<
   try {
     return await Notifications.getAllScheduledNotificationsAsync();
   } catch (error) {
-    console.error('Error getting scheduled notifications:', error);
+    if (__DEV__) console.error('Error getting scheduled notifications:', error);
     return [];
   }
 }
@@ -176,7 +183,7 @@ export function setupNotificationHandlers(
       );
     }
   } catch (error) {
-    console.error('Error setting up notification handlers:', error);
+    if (__DEV__) console.error('Error setting up notification handlers:', error);
   }
 
   return () => {

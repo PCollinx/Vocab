@@ -28,7 +28,7 @@ async function fetchWordFromAPI(word: string): Promise<DictionaryAPIResponse[] |
 
     return await response.json() as DictionaryAPIResponse[];
   } catch (error) {
-    console.error(`[Dictionary] fetch failed for "${word}":`, error);
+    if (__DEV__) console.error(`[Dictionary] fetch failed for "${word}":`, error);
     return null;
   }
 }

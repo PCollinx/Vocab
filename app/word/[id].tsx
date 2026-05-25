@@ -90,7 +90,7 @@ export default function WordDetailScreen() {
       }
       player.play();
     } catch (error) {
-      console.error('Error playing audio:', error);
+      if (__DEV__) console.error('Error playing audio:', error);
     }
   };
 

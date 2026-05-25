@@ -4,12 +4,17 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useAppStore } from '../src/store/appStore';
 import { ThemeProvider } from '../src/context/ThemeContext';
-import { requestNotificationPermission, setupNotificationHandlers } from '../src/services/notificationService';
+import {
+  getNotificationPermissionStatus,
+  requestNotificationPermission,
+  setupNotificationHandlers,
+} from '../src/services/notificationService';
 
 function AppStatusBar() {
   const isDarkMode = useAppStore((s) => s.isDarkMode);
@@ -24,9 +29,25 @@ export default function RootLayout() {
     loadUserData();
 
     try {
-      requestNotificationPermission().catch(error =>
-        console.error('Error requesting notification permissions:', error)
-      );
+      getNotificationPermissionStatus().then(status => {
+        if (status === 'undetermined') {
+          Alert.alert(
+            'Stay on Track 🔔',
+            'WordWise can send you daily word reminders to help build your vocabulary streak. You can change this anytime in Settings.',
+            [
+              { text: 'Not Now', style: 'cancel' },
+              {
+                text: 'Allow Notifications',
+                onPress: () => requestNotificationPermission().catch(error => {
+                  if (__DEV__) console.error('Error requesting notification permissions:', error);
+                }),
+              },
+            ]
+          );
+        }
+      }).catch(error => {
+        if (__DEV__) console.error('Error checking notification permission status:', error);
+      });
 
       cleanupNotifications.current = setupNotificationHandlers(
         (response) => {
@@ -40,7 +61,7 @@ export default function RootLayout() {
               });
             }
           } catch (error) {
-            console.error('Error handling notification response:', error);
+            if (__DEV__) console.error('Error handling notification response:', error);
           }
         },
         (notification) => {
@@ -54,12 +75,12 @@ export default function RootLayout() {
               });
             }
           } catch (error) {
-            console.error('Error handling received notification:', error);
+            if (__DEV__) console.error('Error handling received notification:', error);
           }
         }
       );
     } catch (error) {
-      console.error('Error setting up notifications:', error);
+      if (__DEV__) console.error('Error setting up notifications:', error);
     }
 
     return () => {
@@ -67,7 +88,7 @@ export default function RootLayout() {
         try {
           cleanupNotifications.current();
         } catch (error) {
-          console.error('Error cleaning up notifications:', error);
+          if (__DEV__) console.error('Error cleaning up notifications:', error);
         }
       }
     };
