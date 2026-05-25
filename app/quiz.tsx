@@ -15,12 +15,22 @@ export default function QuizScreen() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  const initQuiz = async () => {
+    setIsLoading(true);
+    setHasError(false);
+    try {
+      if (!currentQuiz) await startQuiz();
+      if (!currentQuiz) throw new Error('Quiz failed to start');
+    } catch {
+      setHasError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const initQuiz = async () => {
-      if (!currentQuiz) await startQuiz();
-      setIsLoading(false);
-    };
     initQuiz();
   }, []);
 
@@ -46,7 +56,7 @@ export default function QuizScreen() {
     endQuiz();
   };
 
-  if (isLoading || !currentQuiz) {
+  if (isLoading || (!currentQuiz && !hasError)) {
     return (
       <Container>
         <View style={styles.loadingContainer}>
@@ -54,6 +64,29 @@ export default function QuizScreen() {
           <Text variant="body" color="muted" style={{ marginTop: spacing[4] }}>
             Loading quiz...
           </Text>
+        </View>
+      </Container>
+    );
+  }
+
+  if (hasError || !currentQuiz) {
+    return (
+      <Container>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.textMuted} />
+          <Text variant="h4" color="heading" style={{ marginTop: spacing[3] }}>
+            Could not load quiz
+          </Text>
+          <Text variant="body" color="muted" style={{ marginTop: spacing[2], textAlign: 'center' }}>
+            Check your connection and try again.
+          </Text>
+          <TouchableOpacity
+            onPress={initQuiz}
+            style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+            activeOpacity={0.8}
+          >
+            <Text variant="button" color="white">Try Again</Text>
+          </TouchableOpacity>
         </View>
       </Container>
     );
@@ -219,7 +252,8 @@ export default function QuizScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing[6] },
+  retryBtn: { marginTop: spacing[5], paddingHorizontal: spacing[6], paddingVertical: spacing[3], borderRadius: borderRadius.full },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing[4] },
   closeBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   scoreDisplay: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },

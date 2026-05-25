@@ -19,27 +19,58 @@ export default function CategoryScreen() {
 
   const [words, setWords] = useState<Word[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
 
+  const PAGE_SIZE = 10;
   const categoryInfo = CATEGORY_INFO[category as keyof typeof CATEGORY_INFO];
   const categoryWords = CURATED_WORDS.filter(w => w.category === category);
 
   useEffect(() => {
-    loadWords();
+    loadWords(true);
   }, [category, selectedDifficulty]);
 
-  const loadWords = async () => {
-    setIsLoading(true);
-    let filteredWords = categoryWords;
-    if (selectedDifficulty) {
-      filteredWords = filteredWords.filter(w => w.difficulty === selectedDifficulty);
+  const getFiltered = () => {
+    if (!selectedDifficulty) return categoryWords;
+    return categoryWords.filter(w => w.difficulty === selectedDifficulty);
+  };
+
+  const loadWords = async (reset: boolean) => {
+    const filtered = getFiltered();
+    const currentOffset = reset ? 0 : offset;
+
+    if (reset) {
+      setIsLoading(true);
+      setHasError(false);
+      setWords([]);
+    } else {
+      setIsLoadingMore(true);
     }
-    const wordObjects = filteredWords.slice(0, 10).map(w => ({
-      word: w.word, category: w.category, difficulty: w.difficulty,
-    }));
-    const fetchedWords = await getWords(wordObjects);
-    setWords(fetchedWords);
-    setIsLoading(false);
+
+    try {
+      const batch = filtered.slice(currentOffset, currentOffset + PAGE_SIZE).map(w => ({
+        word: w.word, category: w.category, difficulty: w.difficulty,
+      }));
+      const fetched = await getWords(batch);
+      const nextOffset = currentOffset + PAGE_SIZE;
+
+      if (reset) {
+        setWords(fetched);
+        setIsLoading(false);
+      } else {
+        setWords(prev => [...prev, ...fetched]);
+        setIsLoadingMore(false);
+      }
+
+      setOffset(nextOffset);
+      setHasMore(nextOffset < filtered.length);
+    } catch {
+      if (reset) { setIsLoading(false); setHasError(true); }
+      else { setIsLoadingMore(false); }
+    }
   };
 
   const difficulties = ['easy', 'medium', 'hard'] as const;
@@ -121,6 +152,23 @@ export default function CategoryScreen() {
                 Loading words...
               </Text>
             </View>
+          ) : hasError ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="cloud-offline-outline" size={48} color={colors.textMuted} />
+              <Text variant="h4" color="heading" style={{ marginTop: spacing[3] }}>
+                Could not load words
+              </Text>
+              <Text variant="body" color="muted" style={{ marginTop: spacing[2], textAlign: 'center' }}>
+                Check your connection and try again.
+              </Text>
+              <TouchableOpacity
+                onPress={() => loadWords(true)}
+                style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+                activeOpacity={0.8}
+              >
+                <Text variant="button" color="white">Try Again</Text>
+              </TouchableOpacity>
+            </View>
           ) : words.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="search-outline" size={48} color={colors.textMuted} />
@@ -192,11 +240,23 @@ export default function CategoryScreen() {
 
           {!isLoading && words.length > 0 && (
             <View style={styles.loadMoreContainer}>
-              <Text variant="caption" color="muted">
-                Showing {words.length} of {selectedDifficulty
-                  ? categoryWords.filter(w => w.difficulty === selectedDifficulty).length
-                  : categoryWords.length} words
+              <Text variant="caption" color="muted" style={{ marginBottom: hasMore ? spacing[3] : 0 }}>
+                Showing {words.length} of {getFiltered().length} words
               </Text>
+              {hasMore && (
+                <TouchableOpacity
+                  style={[styles.loadMoreBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => loadWords(false)}
+                  disabled={isLoadingMore}
+                  activeOpacity={0.7}
+                >
+                  {isLoadingMore ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text variant="body" color="primary">Load More</Text>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -231,5 +291,7 @@ const styles = StyleSheet.create({
   exampleContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginBottom: spacing[3], paddingLeft: spacing[2], borderLeftWidth: 2 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: spacing[2], borderTopWidth: 1 },
   loadMoreContainer: { alignItems: 'center', paddingVertical: spacing[4] },
+  loadMoreBtn: { marginTop: spacing[2], paddingHorizontal: spacing[6], paddingVertical: spacing[3], borderRadius: borderRadius.full, borderWidth: 1, alignItems: 'center', minWidth: 140 },
+  retryBtn: { marginTop: spacing[5], paddingHorizontal: spacing[6], paddingVertical: spacing[3], borderRadius: borderRadius.full },
   bottomSpacer: { height: spacing[10] },
 });

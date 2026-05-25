@@ -34,6 +34,7 @@ interface AppState {
   dailyWordsDate: string | null;
   currentWordIndex: number;
   isLoadingDailyWords: boolean;
+  dailyWordsError: boolean;
 
   // Word Library
   fetchedWords: Word[];
@@ -145,6 +146,7 @@ const initialState = {
   dailyWordsDate: null,
   currentWordIndex: 0,
   isLoadingDailyWords: false,
+  dailyWordsError: false,
   fetchedWords: [],
   bookmarkedWords: [],
   learnedWords: [],
@@ -258,7 +260,7 @@ export const useAppStore = create<AppState>()(
 
         if (dailyWordsDate === today && dailyWords.length > 0) return;
 
-        set({ isLoadingDailyWords: true });
+        set({ isLoadingDailyWords: true, dailyWordsError: false });
         try {
           const goal = Math.max(1, dailyGoal);
           const todayEntry = getWordForDate(new Date());
@@ -266,10 +268,11 @@ export const useAppStore = create<AppState>()(
             .filter(w => w.word !== todayEntry.word)
             .slice(0, goal - 1);
           const words = await getWords([todayEntry, ...extras]);
-          set({ dailyWords: words, dailyWordsDate: today, currentWordIndex: 0, isLoadingDailyWords: false });
+          if (words.length === 0) throw new Error('No words returned');
+          set({ dailyWords: words, dailyWordsDate: today, currentWordIndex: 0, isLoadingDailyWords: false, dailyWordsError: false });
         } catch (error) {
           if (__DEV__) console.error('Error fetching daily words:', error);
-          set({ isLoadingDailyWords: false });
+          set({ isLoadingDailyWords: false, dailyWordsError: true });
         }
       },
 

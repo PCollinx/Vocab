@@ -169,6 +169,7 @@ export default function HomeScreen() {
     dailyWords,
     currentWordIndex,
     isLoadingDailyWords,
+    dailyWordsError,
     fetchDailyWords,
     setCurrentWordIndex,
     learnedWords,
@@ -340,6 +341,25 @@ export default function HomeScreen() {
               <Text variant="body" color="muted" style={{ marginTop: spacing[3] }}>
                 Loading your words...
               </Text>
+            </View>
+          </Card>
+        ) : dailyWordsError ? (
+          <Card style={styles.singleCard}>
+            <View style={styles.loadingContainer}>
+              <Ionicons name="cloud-offline-outline" size={48} color={colors.textMuted} />
+              <Text variant="h4" color="heading" style={{ marginTop: spacing[3] }}>
+                Could not load words
+              </Text>
+              <Text variant="body" color="muted" style={{ marginTop: spacing[2], textAlign: 'center' }}>
+                Check your connection and try again.
+              </Text>
+              <TouchableOpacity
+                onPress={fetchDailyWords}
+                style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+                activeOpacity={0.8}
+              >
+                <Text variant="button" color="white">Try Again</Text>
+              </TouchableOpacity>
             </View>
           </Card>
         ) : N > 0 ? (
@@ -589,6 +609,7 @@ const styles = StyleSheet.create({
   quizSubtext: {},
 
   loadingContainer: { padding: spacing[7], alignItems: "center", justifyContent: "center" },
+  retryBtn: { marginTop: spacing[5], paddingHorizontal: spacing[6], paddingVertical: spacing[3], borderRadius: borderRadius.full },
   bottomSpacer: { height: spacing[20] },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },

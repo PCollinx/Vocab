@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useAppStore } from '../src/store/appStore';
 import { ThemeProvider } from '../src/context/ThemeContext';
+import { ErrorBoundary } from '../src/components';
 import {
   getNotificationPermissionStatus,
   requestNotificationPermission,
@@ -97,8 +98,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppStatusBar />
-        <Stack
+        <ErrorBoundary>
+          <AppStatusBar />
+          <Stack
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',
@@ -115,6 +117,7 @@ export default function RootLayout() {
             }}
           />
         </Stack>
+        </ErrorBoundary>
       </ThemeProvider>
     </SafeAreaProvider>
   );
