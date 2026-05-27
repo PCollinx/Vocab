@@ -5,6 +5,7 @@
  */
 
 import { Word, WordMeaning, DictionaryAPIResponse, WordCategory } from '../types';
+import { getFallbackWord } from '../data/fallbackWords';
 
 const API_BASE_URL = 'https://api.dictionaryapi.dev/api/v2/entries/en';
 
@@ -133,7 +134,9 @@ export async function getWord(
   }
 
   const apiResponse = await fetchWordFromAPI(word);
-  if (!apiResponse || apiResponse.length === 0) return null;
+  if (!apiResponse || apiResponse.length === 0) {
+    return getFallbackWord(word, category, difficulty);
+  }
 
   const result = transformAPIResponse(apiResponse[0], category, difficulty);
   wordCache.set(cacheKey, result);
@@ -162,16 +165,22 @@ export async function getWords(
 /**
  * Client-side search across a word list (searches word, definition, synonyms)
  */
-export function searchWords(query: string, wordList: Word[]): Word[] {
+export function searchWords(query: string, wordList: Word[], limit = 20): Word[] {
   const q = query.toLowerCase().trim();
   if (!q) return [];
 
-  return wordList.filter(
-    w =>
+  const results: Word[] = [];
+  for (const w of wordList) {
+    if (
       w.word.toLowerCase().includes(q) ||
       w.definition.toLowerCase().includes(q) ||
       w.synonyms.some(s => s.toLowerCase().includes(q))
-  );
+    ) {
+      results.push(w);
+      if (results.length === limit) break;
+    }
+  }
+  return results;
 }
 
 /**

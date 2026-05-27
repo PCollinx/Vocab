@@ -101,7 +101,7 @@ interface AppState {
   clearSearch: () => void;
 
   // Quiz actions
-  startQuiz: (words?: Word[]) => Promise<void>;
+  startQuiz: (words?: Word[]) => Promise<QuizSession | null>;
   answerQuestion: (answer: string) => void;
   nextQuestion: () => void;
   endQuiz: () => void;
@@ -127,6 +127,7 @@ interface AppState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (updates: { name?: string; bio?: string; email?: string; age?: number; newPassword?: string; currentPassword: string }) => { success: boolean; error?: string };
+  deleteAccount: (password: string) => { success: boolean; error?: string };
 }
 
 const initialState = {
@@ -425,14 +426,13 @@ export const useAppStore = create<AppState>()(
         let quizWords = words;
 
         if (!quizWords || quizWords.length < 4) {
-          // Fetch random words for quiz
           const randomEntries = getRandomWords(5);
           quizWords = await getWords(randomEntries);
         }
 
         if (quizWords.length < 4) {
           if (__DEV__) console.error("Not enough words for quiz");
-          return;
+          return null;
         }
 
         const questions = generateQuizQuestions(quizWords.slice(0, 5));
@@ -448,6 +448,7 @@ export const useAppStore = create<AppState>()(
         };
 
         set({ currentQuiz: session });
+        return session;
       },
 
       answerQuestion: (answer: string) => {
@@ -634,6 +635,15 @@ export const useAppStore = create<AppState>()(
         if (age !== undefined) updates.userAge = age;
         if (newPassword) updates.userPassword = newPassword;
         set(updates);
+        return { success: true };
+      },
+
+      deleteAccount: (password: string) => {
+        const { userPassword } = get();
+        if (userPassword !== password) {
+          return { success: false, error: 'Password is incorrect.' };
+        }
+        set({ ...initialState, isLoading: false, hasCompletedOnboarding: true });
         return { success: true };
       },
     }),

@@ -21,8 +21,10 @@ export default function QuizScreen() {
     setIsLoading(true);
     setHasError(false);
     try {
-      if (!currentQuiz) await startQuiz();
-      if (!currentQuiz) throw new Error('Quiz failed to start');
+      if (!currentQuiz) {
+        const quiz = await startQuiz();
+        if (!quiz) throw new Error('Quiz failed to start');
+      }
     } catch {
       setHasError(true);
     } finally {

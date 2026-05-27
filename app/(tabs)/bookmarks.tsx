@@ -18,8 +18,12 @@ export default function BookmarksScreen() {
   const { colors } = useTheme();
   const { bookmarkedWords, learnedWords } = useAppStore();
   const [query, setQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  const resetVisible = () => setVisibleCount(20);
 
   const filteredBookmarks = useMemo(() => {
+    resetVisible();
     const normalized = query.trim().toLowerCase();
     if (!normalized) return bookmarkedWords;
     return bookmarkedWords.filter((word) =>
@@ -29,6 +33,9 @@ export default function BookmarksScreen() {
       word.category.toLowerCase().includes(normalized)
     );
   }, [bookmarkedWords, query]);
+
+  const visibleBookmarks = filteredBookmarks.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredBookmarks.length;
 
   const learnedSet = useMemo(
     () => new Set(learnedWords.map((item) => item.wordId.toLowerCase())),
@@ -107,7 +114,7 @@ export default function BookmarksScreen() {
           </Card>
         ) : (
           <View style={styles.list}>
-            {filteredBookmarks.map((word) => {
+            {visibleBookmarks.map((word) => {
               const isLearned = learnedSet.has(word.id.toLowerCase());
               return (
                 <TouchableOpacity
@@ -144,6 +151,17 @@ export default function BookmarksScreen() {
                 </TouchableOpacity>
               );
             })}
+            {hasMore && (
+              <TouchableOpacity
+                style={[styles.loadMoreBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={() => setVisibleCount(c => c + 20)}
+                activeOpacity={0.7}
+              >
+                <Text variant="body" color="primary">
+                  Load More ({filteredBookmarks.length - visibleCount} remaining)
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -175,6 +193,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4], paddingVertical: spacing[2],
   },
   list: { gap: spacing[3] },
+  loadMoreBtn: { borderWidth: 1, borderRadius: borderRadius.full, paddingVertical: spacing[3], alignItems: 'center', marginTop: spacing[2] },
   wordCard: { borderRadius: borderRadius.xl, padding: spacing[4], gap: spacing[3] },
   wordTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   wordTitle: { flex: 1, marginRight: spacing[2] },

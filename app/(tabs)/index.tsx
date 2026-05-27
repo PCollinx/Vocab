@@ -386,6 +386,7 @@ export default function HomeScreen() {
                   flatListRef.current?.scrollToIndex({ index, animated: false });
                 });
               }}
+              style={{ zIndex: 2 }}
             />
 
             {N > 1 && (
@@ -563,12 +564,12 @@ const styles = StyleSheet.create({
 
   singleCard: {
     marginHorizontal: spacing[4], marginTop: -34, marginBottom: spacing[4],
-    borderRadius: 28, paddingTop: spacing[5],
+    borderRadius: 28, paddingTop: spacing[5], zIndex: 1,
     shadowColor: "#000", shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08, shadowRadius: 24, elevation: 4,
   },
 
-  carouselWrapper: { marginTop: -34, marginBottom: spacing[2] },
+  carouselWrapper: { marginTop: -34, marginBottom: spacing[2], zIndex: 1, elevation: 8 },
   carouselItem: { width: SCREEN_WIDTH, paddingHorizontal: spacing[4] },
   wordCard: {
     borderRadius: 28, paddingTop: spacing[5],
@@ -582,7 +583,8 @@ const styles = StyleSheet.create({
   },
   paginationDots: {
     flexDirection: "row", justifyContent: "center",
-    gap: spacing[2], marginTop: spacing[3], marginBottom: spacing[2],
+    gap: spacing[2], marginTop: spacing[8], marginBottom: spacing[4],
+    zIndex: 1,
   },
   dot: { width: 6, height: 6, borderRadius: 3 },
 
@@ -601,6 +603,7 @@ const styles = StyleSheet.create({
   quizCard: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     marginHorizontal: spacing[4], padding: spacing[4], borderRadius: borderRadius.xl,
+    marginTop: spacing[3],
   },
   quizContent: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
   quizIcon: { width: 34, height: 34, borderRadius: borderRadius.full, justifyContent: "center", alignItems: "center" },

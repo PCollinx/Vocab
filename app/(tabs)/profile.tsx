@@ -46,6 +46,7 @@ export default function ProfileScreen() {
     reminderTime,
     setReminderTime,
     updateProfile,
+    deleteAccount,
     logout,
     isDarkMode,
     toggleDarkMode,
@@ -77,6 +78,12 @@ export default function ProfileScreen() {
   const [showNewPw, setShowNewPw] = useState(false);
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState(false);
+
+  // Delete Account state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePw, setShowDeletePw] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const openEditProfile = () => {
     setEditName(userName ?? "");
@@ -134,6 +141,22 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const openDeleteModal = () => {
+    setDeletePassword("");
+    setDeleteError("");
+    setShowDeletePw(false);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteAccount = () => {
+    setDeleteError("");
+    if (!deletePassword) return setDeleteError("Enter your password to confirm.");
+    const result = deleteAccount(deletePassword);
+    if (!result.success) return setDeleteError(result.error ?? "Deletion failed.");
+    setShowDeleteModal(false);
+    router.replace("/auth");
   };
 
   const achievements = [
@@ -549,6 +572,26 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.settingItem,
+              { borderTopWidth: 1, borderTopColor: colors.border },
+            ]}
+            onPress={openDeleteModal}
+          >
+            <View style={styles.settingInfo}>
+              <Ionicons
+                name="trash-outline"
+                size={20}
+                color={colors.wrong}
+                style={styles.settingIcon}
+              />
+              <Text variant="body" color="wrong">
+                Delete Account
+              </Text>
+            </View>
+          </TouchableOpacity>
         </Card>
 
         {isSchedulingNotifications && (
@@ -881,6 +924,130 @@ export default function ProfileScreen() {
                 </Text>
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Delete Account Modal */}
+      <Modal
+        visible={showDeleteModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View
+            style={[
+              styles.modalSheetContent,
+              { backgroundColor: colors.surface },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text variant="h4" color="heading">
+                Delete Account
+              </Text>
+              <Pressable onPress={() => setShowDeleteModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textHeading} />
+              </Pressable>
+            </View>
+
+            <View
+              style={[
+                styles.feedbackBox,
+                { backgroundColor: colors.wrongLight },
+              ]}
+            >
+              <Ionicons
+                name="warning-outline"
+                size={15}
+                color={colors.wrong}
+              />
+              <Text
+                variant="bodySmall"
+                style={{ color: colors.wrong, flex: 1 }}
+              >
+                This will permanently delete your account and all data including bookmarks, progress, and quiz history. This cannot be undone.
+              </Text>
+            </View>
+
+            {!!deleteError && (
+              <View
+                style={[
+                  styles.feedbackBox,
+                  { backgroundColor: colors.wrongLight, marginTop: spacing[2] },
+                ]}
+              >
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={15}
+                  color={colors.wrong}
+                />
+                <Text
+                  variant="bodySmall"
+                  style={{ color: colors.wrong, flex: 1 }}
+                >
+                  {deleteError}
+                </Text>
+              </View>
+            )}
+
+            <Text variant="label" color="muted" style={styles.editLabel}>
+              Enter your password to confirm
+            </Text>
+            <View
+              style={[
+                styles.editInputRow,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons
+                name="key-outline"
+                size={17}
+                color={colors.textMuted}
+                style={styles.editInputIcon}
+              />
+              <TextInput
+                style={[
+                  styles.editInput,
+                  styles.editInputFlex,
+                  { color: colors.textHeading },
+                ]}
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                placeholder="Current password"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry={!showDeletePw}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                onPress={() => setShowDeletePw(!showDeletePw)}
+                style={styles.eyeBtn}
+              >
+                <Ionicons
+                  name={showDeletePw ? "eye-off-outline" : "eye-outline"}
+                  size={17}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                { backgroundColor: colors.wrong },
+              ]}
+              onPress={handleDeleteAccount}
+            >
+              <Text variant="button" color="white">
+                Delete My Account
+              </Text>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Modal>
