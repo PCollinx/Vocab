@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   View,
   StyleSheet,
@@ -11,8 +11,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons, AntDesign } from "@expo/vector-icons";
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
 import { auth } from "../src/services/firebase";
 import { Text, Button } from "../src/components";
@@ -20,7 +19,14 @@ import { spacing, borderRadius } from "../src/constants";
 import { useTheme } from "../src/context/ThemeContext";
 import { useAppStore } from "../src/store/appStore";
 
-WebBrowser.maybeCompleteAuthSession();
+const IOS_CLIENT_ID = "549372255118-0dh043d953silcnikfn2lddcmlabp2fa.apps.googleusercontent.com";
+const WEB_CLIENT_ID = "549372255118-d1um0k07t0gn4442n4iakg6afe7vs02e.apps.googleusercontent.com";
+
+GoogleSignin.configure({
+  webClientId: WEB_CLIENT_ID,
+  iosClientId: IOS_CLIENT_ID,
+  offlineAccess: false,
+});
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -39,45 +45,30 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // webClientId = Web Client ID from Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
-  // clientId = fallback used when platform-specific ID is not set (covers Expo Go + simulator testing)
-  const WEB_CLIENT_ID = "549372255118-d1um0k07t0gn4442n4iakg6afe7vs02e.apps.googleusercontent.com";
-  const [, googleResponse, googlePrompt] = Google.useAuthRequest({
-    clientId: WEB_CLIENT_ID,
-    webClientId: WEB_CLIENT_ID,
-    // iosClientId: 'REPLACE_WITH_IOS_CLIENT_ID',     // add before App Store submission
-    // androidClientId: 'REPLACE_WITH_ANDROID_CLIENT_ID', // add before Play Store submission
-  });
-
-  useEffect(() => {
-    if (googleResponse?.type !== "success") return;
-    setGoogleLoading(true);
-    setError("");
-    const run = async () => {
-      try {
-        const r = googleResponse as any;
-        const idToken = r.authentication?.idToken ?? r.params?.id_token ?? null;
-        const accessToken =
-          r.authentication?.accessToken ?? r.params?.access_token ?? null;
-        if (!idToken && !accessToken) throw new Error("No token");
-        const credential = GoogleAuthProvider.credential(idToken, accessToken);
-        const result = await signInWithCredential(auth, credential);
-        if (result.user.displayName) {
-          useAppStore.getState().setUserName(result.user.displayName);
-        }
-        router.replace(hasCompletedOnboarding ? "/(tabs)" : "/onboarding");
-      } catch {
-        setError("Google sign-in failed. Please try again.");
-      } finally {
-        setGoogleLoading(false);
-      }
-    };
-    run();
-  }, [googleResponse]);
-
   const switchMode = (next: "login" | "signup") => {
     setMode(next);
     setError("");
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError("");
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await GoogleSignin.signIn();
+      const { idToken } = await GoogleSignin.getTokens();
+      if (!idToken) throw new Error("No ID token");
+      const credential = GoogleAuthProvider.credential(idToken);
+      const result = await signInWithCredential(auth, credential);
+      if (result.user.displayName) {
+        useAppStore.getState().setUserName(result.user.displayName);
+      }
+      router.replace(hasCompletedOnboarding ? "/(tabs)" : "/onboarding");
+    } catch {
+      setError("Google sign-in failed. Please try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -416,7 +407,7 @@ export default function AuthScreen() {
                 borderColor: colors.border,
               },
             ]}
-            onPress={() => googlePrompt()}
+            onPress={handleGoogleSignIn}
             disabled={googleLoading || loading}
             activeOpacity={0.8}
           >

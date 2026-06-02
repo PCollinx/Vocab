@@ -6,7 +6,18 @@
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('exports', {}\\).get\\('.', {}\\), indent=2\\)\\)\")",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('expo-auth-session:', d['version']\\)\")",
       "Bash(node -e \"const m = require\\('/Users/collins/Desktop/React-Native/vocab/node_modules/expo-auth-session/providers/google'\\); console.log\\(Object.keys\\(m\\)\\)\")",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); peers=d.get\\('peerDependencies',{}\\); print\\(json.dumps\\(peers, indent=2\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); peers=d.get\\('peerDependencies',{}\\); print\\(json.dumps\\(peers, indent=2\\)\\)\")",
+      "Bash(xcode-select -p)",
+      "Bash(xcodebuild -version)",
+      "Bash(pod --version)",
+      "Bash(brew --version)",
+      "Bash(brew install *)",
+      "Bash(chmod 0600 ~/.netrc)",
+      "Read(//Users/collins/**)",
+      "Bash(xcodebuild -workspace ios/vocab.xcworkspace -scheme vocab -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator')",
+      "Bash(ls /Applications/ | grep -i android; which adb 2>/dev/null || echo \"adb not found\"; ls ~/Library/Android/sdk/emulator/emulator 2>/dev/null || echo \"Android SDK not found\")",
+      "Read(//Applications/**)",
+      "Bash(~/Library/Android/sdk/emulator/emulator -list-avds)"
     ]
   }
 }

@@ -1,7 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// Paste your config from Firebase Console → Project Settings → Your apps → SDK setup
 const firebaseConfig = {
   apiKey: "AIzaSyAEWkwInvhE5xkgF4ZTqKxWWGlaHsTW-TE",
   authDomain: "wordwise-695a3.firebaseapp.com",
@@ -12,9 +11,6 @@ const firebaseConfig = {
   measurementId: "G-0JWZ19D907",
 };
 
-const app =
-  getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Metro resolves firebase/auth to the React Native build (dist/rn),
-// which uses AsyncStorage persistence by default — no extra config needed.
 export const auth = getAuth(app);
