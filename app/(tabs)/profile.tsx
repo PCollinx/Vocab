@@ -32,7 +32,6 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const {
     userName,
-    userEmail,
     userAge,
     totalWordsLearned,
     currentStreak,
@@ -69,7 +68,6 @@ export default function ProfileScreen() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
-  const [editEmail, setEditEmail] = useState("");
   const [editAge, setEditAge] = useState("");
   const [editCurrentPassword, setEditCurrentPassword] = useState("");
   const [editNewPassword, setEditNewPassword] = useState("");
@@ -88,7 +86,6 @@ export default function ProfileScreen() {
   const openEditProfile = () => {
     setEditName(userName ?? "");
     setEditBio(userBio ?? "");
-    setEditEmail(userEmail ?? "");
     setEditAge(userAge != null ? String(userAge) : "");
     setEditCurrentPassword("");
     setEditNewPassword("");
@@ -98,11 +95,9 @@ export default function ProfileScreen() {
     setShowEditProfile(true);
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     setEditError("");
     if (!editName.trim()) return setEditError("Name cannot be empty.");
-    if (editEmail && !/\S+@\S+\.\S+/.test(editEmail))
-      return setEditError("Enter a valid email.");
     if (
       editAge &&
       (isNaN(Number(editAge)) || Number(editAge) < 1 || Number(editAge) > 120)
@@ -116,10 +111,9 @@ export default function ProfileScreen() {
     if (!editCurrentPassword)
       return setEditError("Enter your current password to save changes.");
 
-    const result = updateProfile({
+    const result = await updateProfile({
       name: editName.trim(),
       bio: editBio.trim() || undefined,
-      email: editEmail.trim() || undefined,
       age: editAge ? Number(editAge) : undefined,
       newPassword: editNewPassword || undefined,
       currentPassword: editCurrentPassword,
@@ -150,10 +144,10 @@ export default function ProfileScreen() {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     setDeleteError("");
     if (!deletePassword) return setDeleteError("Enter your password to confirm.");
-    const result = deleteAccount(deletePassword);
+    const result = await deleteAccount(deletePassword);
     if (!result.success) return setDeleteError(result.error ?? "Deletion failed.");
     setShowDeleteModal(false);
     router.replace("/auth");
@@ -727,36 +721,6 @@ export default function ProfileScreen() {
                   placeholder="A short bio"
                   placeholderTextColor={colors.textMuted}
                   maxLength={60}
-                />
-              </View>
-
-              <Text variant="label" color="muted" style={styles.editLabel}>
-                Email
-              </Text>
-              <View
-                style={[
-                  styles.editInputRow,
-                  {
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="mail-outline"
-                  size={17}
-                  color={colors.textMuted}
-                  style={styles.editInputIcon}
-                />
-                <TextInput
-                  style={[styles.editInput, { color: colors.textHeading }]}
-                  value={editEmail}
-                  onChangeText={setEditEmail}
-                  placeholder="Email address"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
                 />
               </View>
 

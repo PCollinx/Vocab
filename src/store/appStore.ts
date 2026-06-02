@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile as firebaseUpdateProfile,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updatePassword,
+  deleteUser,
+} from 'firebase/auth';
+import { auth } from '../services/firebase';
 import { Word, WordProgress, QuizSession } from "../types";
 import { getWord, getWords, searchWords } from "../services/dictionaryApi";
 import {
@@ -9,6 +20,21 @@ import {
   getRandomWords,
 } from "../data/wordList";
 import { generateQuizQuestions } from "../utils/quizGenerator";
+
+function firebaseAuthError(code: string): string {
+  switch (code) {
+    case 'auth/email-already-in-use': return 'An account with this email already exists.';
+    case 'auth/invalid-email': return 'Please enter a valid email address.';
+    case 'auth/weak-password': return 'Password must be at least 6 characters.';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential': return 'Invalid email or password.';
+    case 'auth/too-many-requests': return 'Too many attempts. Please try again later.';
+    case 'auth/requires-recent-login': return 'Please log out and log back in to make this change.';
+    case 'auth/account-exists-with-different-credential': return 'An account already exists with this email. Try a different sign-in method.';
+    default: return 'Something went wrong. Please try again.';
+  }
+}
 
 interface AppState {
   // User data
@@ -72,7 +98,6 @@ interface AppState {
   isLoggedIn: boolean;
   userEmail: string | null;
   userAge: number | null;
-  userPassword: string | null;
 
   // Actions
   loadUserData: () => Promise<void>;
@@ -126,8 +151,8 @@ interface AppState {
   signup: (name: string, email: string, age: number, password: string) => Promise<{ success: boolean; error?: string }>;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  updateProfile: (updates: { name?: string; bio?: string; email?: string; age?: number; newPassword?: string; currentPassword: string }) => { success: boolean; error?: string };
-  deleteAccount: (password: string) => { success: boolean; error?: string };
+  updateProfile: (updates: { name?: string; bio?: string; age?: number; newPassword?: string; currentPassword: string }) => Promise<{ success: boolean; error?: string }>;
+  deleteAccount: (password: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const initialState = {
@@ -165,7 +190,6 @@ const initialState = {
   isLoggedIn: false,
   userEmail: null,
   userAge: null,
-  userPassword: null,
 };
 
 export const useAppStore = create<AppState>()(
@@ -599,52 +623,64 @@ export const useAppStore = create<AppState>()(
       },
 
       signup: async (name, email, age, password) => {
-        const { userEmail } = get();
-        if (userEmail && userEmail === email) {
-          return { success: false, error: 'An account with this email already exists.' };
+        try {
+          const credential = await createUserWithEmailAndPassword(auth, email, password);
+          await firebaseUpdateProfile(credential.user, { displayName: name });
+          set({ userName: name, userEmail: email, userAge: age, isLoggedIn: true });
+          return { success: true };
+        } catch (error: any) {
+          return { success: false, error: firebaseAuthError(error.code) };
         }
-        set({ userName: name, userEmail: email, userAge: age, userPassword: password, isLoggedIn: true });
-        return { success: true };
       },
 
       login: async (email, password) => {
-        const { userEmail, userPassword } = get();
-        if (!userEmail || !userPassword) {
-          return { success: false, error: 'No account found. Please sign up first.' };
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+          set({ isLoggedIn: true, userEmail: email });
+          return { success: true };
+        } catch (error: any) {
+          return { success: false, error: firebaseAuthError(error.code) };
         }
-        if (userEmail !== email || userPassword !== password) {
-          return { success: false, error: 'Invalid email or password.' };
-        }
-        set({ isLoggedIn: true });
-        return { success: true };
       },
 
       logout: () => {
+        signOut(auth);
         set({ isLoggedIn: false });
       },
 
-      updateProfile: ({ name, bio, email, age, newPassword, currentPassword }) => {
-        const { userPassword } = get();
-        if (userPassword !== currentPassword) {
-          return { success: false, error: 'Current password is incorrect.' };
+      updateProfile: async ({ name, bio, age, newPassword, currentPassword }) => {
+        const user = auth.currentUser;
+        if (!user || !user.email) return { success: false, error: 'Not logged in.' };
+        try {
+          const credential = EmailAuthProvider.credential(user.email, currentPassword);
+          await reauthenticateWithCredential(user, credential);
+          if (name !== undefined) {
+            await firebaseUpdateProfile(user, { displayName: name });
+          }
+          if (newPassword) await updatePassword(user, newPassword);
+          const updates: Partial<AppState> = {};
+          if (name !== undefined) updates.userName = name;
+          if (bio !== undefined) updates.userBio = bio;
+          if (age !== undefined) updates.userAge = age;
+          set(updates);
+          return { success: true };
+        } catch (error: any) {
+          return { success: false, error: firebaseAuthError(error.code) };
         }
-        const updates: Partial<AppState> = {};
-        if (name !== undefined) updates.userName = name;
-        if (bio !== undefined) updates.userBio = bio;
-        if (email !== undefined) updates.userEmail = email;
-        if (age !== undefined) updates.userAge = age;
-        if (newPassword) updates.userPassword = newPassword;
-        set(updates);
-        return { success: true };
       },
 
-      deleteAccount: (password: string) => {
-        const { userPassword } = get();
-        if (userPassword !== password) {
-          return { success: false, error: 'Password is incorrect.' };
+      deleteAccount: async (password: string) => {
+        const user = auth.currentUser;
+        if (!user || !user.email) return { success: false, error: 'Not logged in.' };
+        try {
+          const credential = EmailAuthProvider.credential(user.email, password);
+          await reauthenticateWithCredential(user, credential);
+          await deleteUser(user);
+          set({ ...initialState, isLoading: false, hasCompletedOnboarding: true });
+          return { success: true };
+        } catch (error: any) {
+          return { success: false, error: firebaseAuthError(error.code) };
         }
-        set({ ...initialState, isLoading: false, hasCompletedOnboarding: true });
-        return { success: true };
       },
     }),
     {
@@ -680,7 +716,6 @@ export const useAppStore = create<AppState>()(
         isLoggedIn: state.isLoggedIn,
         userEmail: state.userEmail,
         userAge: state.userAge,
-        userPassword: state.userPassword,
       }),
     },
   ),

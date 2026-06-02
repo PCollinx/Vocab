@@ -33,16 +33,16 @@ WordWise is a mobile vocabulary learning app designed for users who want to impr
 
 ## Tech Stack
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **React Native** | 0.81.5 | Cross-platform mobile framework |
-| **Expo** | ~54.0.33 | Development platform & build tools |
-| **TypeScript** | ~5.9.2 | Type safety |
-| **expo-router** | ~6.0.23 | File-based navigation |
-| **zustand** | ^5.0.12 | State management |
-| **AsyncStorage** | 2.2.0 | Persistent local storage |
-| **expo-audio** | ~1.1.1 | Audio playback for pronunciations |
-| **@expo/vector-icons** | ^15.0.3 | Icon library (Ionicons) |
+| Technology             | Version  | Purpose                            |
+| ---------------------- | -------- | ---------------------------------- |
+| **React Native**       | 0.81.5   | Cross-platform mobile framework    |
+| **Expo**               | ~54.0.33 | Development platform & build tools |
+| **TypeScript**         | ~5.9.2   | Type safety                        |
+| **expo-router**        | ~6.0.23  | File-based navigation              |
+| **zustand**            | ^5.0.12  | State management                   |
+| **AsyncStorage**       | 2.2.0    | Persistent local storage           |
+| **expo-audio**         | ~1.1.1   | Audio playback for pronunciations  |
+| **@expo/vector-icons** | ^15.0.3  | Icon library (Ionicons)            |
 
 ### Key Dependencies
 
@@ -170,18 +170,21 @@ npm run web
 ## Features
 
 ### 1. Word of the Day
+
 - Displays a new vocabulary word each day
 - Shows definition, pronunciation, examples, synonyms, and antonyms
 - Audio pronunciation playback
 - Mark as learned / bookmark functionality
 
 ### 2. Discover & Search
+
 - Browse words by 8 categories
 - Real-time search with API integration
 - View bookmarked words
 - Featured word suggestions
 
 ### 3. Quiz System
+
 - Multiple-choice vocabulary questions
 - Synonym matching questions
 - Progress tracking during quiz
@@ -189,6 +192,7 @@ npm run web
 - Quiz history tracking
 
 ### 4. Word Categories
+
 - **Business** - Professional terminology
 - **Science** - Scientific vocabulary
 - **Literature** - Literary terms
@@ -199,12 +203,14 @@ npm run web
 - **Academic** - Scholarly terms
 
 ### 5. Progress Tracking
+
 - Daily learning streaks
 - Weekly activity visualization
 - Total words learned counter
 - Mastery level tracking
 
 ### 6. Bookmarks
+
 - Save favorite words
 - Quick access from Discover screen
 - Persistent storage
@@ -222,11 +228,13 @@ The app uses the [Free Dictionary API](https://dictionaryapi.dev/) to fetch word
 **Endpoint:** `GET /{word}`
 
 #### Request Example
+
 ```
 GET https://api.dictionaryapi.dev/api/v2/entries/en/serendipity
 ```
 
 #### Response Structure
+
 ```typescript
 interface DictionaryAPIResponse {
   word: string;
@@ -259,25 +267,26 @@ interface DictionaryAPIResponse {
 
 Location: `src/services/dictionaryApi.ts`
 
-| Function | Description | Parameters | Returns |
-|----------|-------------|------------|---------|
-| `fetchWordFromAPI(word)` | Raw API fetch | `word: string` | `DictionaryAPIResponse[] \| null` |
-| `transformAPIResponse(response, category?, difficulty?)` | Transform API data to Word model | See types | `Word` |
-| `getWord(word, category?, difficulty?)` | Fetch and transform a single word | See types | `Word \| null` |
-| `getWords(words)` | Fetch multiple words in parallel | `{word, category?, difficulty?}[]` | `Word[]` |
-| `searchWords(query, wordList)` | Client-side search | `query: string, wordList: Word[]` | `Word[]` |
+| Function                                                 | Description                       | Parameters                         | Returns                           |
+| -------------------------------------------------------- | --------------------------------- | ---------------------------------- | --------------------------------- |
+| `fetchWordFromAPI(word)`                                 | Raw API fetch                     | `word: string`                     | `DictionaryAPIResponse[] \| null` |
+| `transformAPIResponse(response, category?, difficulty?)` | Transform API data to Word model  | See types                          | `Word`                            |
+| `getWord(word, category?, difficulty?)`                  | Fetch and transform a single word | See types                          | `Word \| null`                    |
+| `getWords(words)`                                        | Fetch multiple words in parallel  | `{word, category?, difficulty?}[]` | `Word[]`                          |
+| `searchWords(query, wordList)`                           | Client-side search                | `query: string, wordList: Word[]`  | `Word[]`                          |
 
 #### Usage Example
+
 ```typescript
-import { getWord, getWords } from '../services/dictionaryApi';
+import { getWord, getWords } from "../services/dictionaryApi";
 
 // Fetch a single word
-const word = await getWord('serendipity', 'everyday', 'medium');
+const word = await getWord("serendipity", "everyday", "medium");
 
 // Fetch multiple words
 const words = await getWords([
-  { word: 'eloquent', category: 'literature' },
-  { word: 'algorithm', category: 'technology', difficulty: 'medium' }
+  { word: "eloquent", category: "literature" },
+  { word: "algorithm", category: "technology", difficulty: "medium" },
 ]);
 ```
 
@@ -288,6 +297,7 @@ const words = await getWords([
 The app uses **Zustand** with **AsyncStorage** persistence for global state management.
 
 ### Store Location
+
 `src/store/appStore.ts`
 
 ### State Structure
@@ -330,27 +340,27 @@ interface AppState {
 
 ### Available Actions
 
-| Action | Description |
-|--------|-------------|
-| `loadUserData()` | Initialize user data from storage |
-| `setUserName(name)` | Set the user's display name |
-| `completeOnboarding()` | Mark onboarding as complete |
-| `resetOnboarding()` | Reset to show onboarding again |
-| `fetchTodayWord()` | Fetch the word of the day |
-| `markTodayWordComplete()` | Mark today's word as learned |
-| `fetchWordDetails(word)` | Get full details for a word |
-| `fetchCategoryWords(category, count?)` | Get words from a category |
-| `markWordLearned(wordId)` | Mark a word as learned |
-| `toggleBookmark(word)` | Add/remove word from bookmarks |
-| `isWordBookmarked(wordId)` | Check if word is bookmarked |
-| `searchForWords(query)` | Search for words via API |
-| `clearSearch()` | Clear search results |
-| `startQuiz(words?)` | Start a new quiz session |
-| `answerQuestion(answer)` | Submit an answer |
-| `nextQuestion()` | Move to next question |
-| `endQuiz()` | End the current quiz |
-| `updateStreak()` | Update daily streak |
-| `checkAndUpdateStreak()` | Check and update streak on app open |
+| Action                                 | Description                         |
+| -------------------------------------- | ----------------------------------- |
+| `loadUserData()`                       | Initialize user data from storage   |
+| `setUserName(name)`                    | Set the user's display name         |
+| `completeOnboarding()`                 | Mark onboarding as complete         |
+| `resetOnboarding()`                    | Reset to show onboarding again      |
+| `fetchTodayWord()`                     | Fetch the word of the day           |
+| `markTodayWordComplete()`              | Mark today's word as learned        |
+| `fetchWordDetails(word)`               | Get full details for a word         |
+| `fetchCategoryWords(category, count?)` | Get words from a category           |
+| `markWordLearned(wordId)`              | Mark a word as learned              |
+| `toggleBookmark(word)`                 | Add/remove word from bookmarks      |
+| `isWordBookmarked(wordId)`             | Check if word is bookmarked         |
+| `searchForWords(query)`                | Search for words via API            |
+| `clearSearch()`                        | Clear search results                |
+| `startQuiz(words?)`                    | Start a new quiz session            |
+| `answerQuestion(answer)`               | Submit an answer                    |
+| `nextQuestion()`                       | Move to next question               |
+| `endQuiz()`                            | End the current quiz                |
+| `updateStreak()`                       | Update daily streak                 |
+| `checkAndUpdateStreak()`               | Check and update streak on app open |
 
 ### Usage Example
 
@@ -358,11 +368,11 @@ interface AppState {
 import { useAppStore } from '../store/appStore';
 
 function MyComponent() {
-  const { 
-    todayWord, 
-    isLoadingTodayWord, 
+  const {
+    todayWord,
+    isLoadingTodayWord,
     fetchTodayWord,
-    toggleBookmark 
+    toggleBookmark
   } = useAppStore();
 
   useEffect(() => {
@@ -384,47 +394,51 @@ function MyComponent() {
 The app uses a custom "Sky & Coral" color palette designed for a premium, friendly feel.
 
 #### Primary Colors (Sky Blue)
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `primary` | #378ADD | Buttons, CTAs, active states |
-| `primaryLight` | #E6F1FB | Light backgrounds |
-| `primaryDark` | #185FA5 | Pressed states |
+
+| Token          | Hex     | Usage                        |
+| -------------- | ------- | ---------------------------- |
+| `primary`      | #378ADD | Buttons, CTAs, active states |
+| `primaryLight` | #E6F1FB | Light backgrounds            |
+| `primaryDark`  | #185FA5 | Pressed states               |
 
 #### Accent Colors (Coral)
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `accent` | #D85A30 | Highlights, warm moments |
-| `accentLight` | #FAECE7 | Light backgrounds |
+
+| Token         | Hex     | Usage                    |
+| ------------- | ------- | ------------------------ |
+| `accent`      | #D85A30 | Highlights, warm moments |
+| `accentLight` | #FAECE7 | Light backgrounds        |
 
 #### Semantic Colors
-| Token | Hex | Usage |
-|-------|-----|-------|
+
+| Token     | Hex     | Usage                     |
+| --------- | ------- | ------------------------- |
 | `correct` | #639922 | Correct answers, mastered |
-| `wrong` | #D85A30 | Wrong answers |
-| `streak` | #EF9F27 | Streaks, rewards |
+| `wrong`   | #D85A30 | Wrong answers             |
+| `streak`  | #EF9F27 | Streaks, rewards          |
 
 #### Neutral Colors
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `background` | #F1EFE8 | App background |
-| `surface` | #FFFFFF | Cards, containers |
-| `textHeading` | #2C2C2A | Headings |
-| `textBody` | #5F5E5A | Body text |
-| `textMuted` | #888780 | Secondary text |
-| `border` | #D3D1C7 | Borders |
+
+| Token         | Hex     | Usage             |
+| ------------- | ------- | ----------------- |
+| `background`  | #F1EFE8 | App background    |
+| `surface`     | #FFFFFF | Cards, containers |
+| `textHeading` | #2C2C2A | Headings          |
+| `textBody`    | #5F5E5A | Body text         |
+| `textMuted`   | #888780 | Secondary text    |
+| `border`      | #D3D1C7 | Borders           |
 
 ### Typography Scale
 
 ```typescript
 const textStyles = {
-  h1: { fontSize: 32, fontWeight: '700', lineHeight: 40 },
-  h2: { fontSize: 24, fontWeight: '700', lineHeight: 32 },
-  h3: { fontSize: 20, fontWeight: '600', lineHeight: 28 },
-  bodyLarge: { fontSize: 18, fontWeight: '400', lineHeight: 28 },
-  body: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
-  bodySmall: { fontSize: 14, fontWeight: '400', lineHeight: 20 },
-  caption: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
-  label: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
+  h1: { fontSize: 32, fontWeight: "700", lineHeight: 40 },
+  h2: { fontSize: 24, fontWeight: "700", lineHeight: 32 },
+  h3: { fontSize: 20, fontWeight: "600", lineHeight: 28 },
+  bodyLarge: { fontSize: 18, fontWeight: "400", lineHeight: 28 },
+  body: { fontSize: 16, fontWeight: "400", lineHeight: 24 },
+  bodySmall: { fontSize: 14, fontWeight: "400", lineHeight: 20 },
+  caption: { fontSize: 12, fontWeight: "400", lineHeight: 16 },
+  label: { fontSize: 14, fontWeight: "600", lineHeight: 20 },
 };
 ```
 
@@ -454,8 +468,8 @@ const borderRadius = {
   md: 8,
   lg: 12,
   xl: 16,
-  '2xl': 20,
-  '3xl': 24,
+  "2xl": 20,
+  "3xl": 24,
   full: 9999,
 };
 ```
@@ -465,6 +479,7 @@ const borderRadius = {
 ## Components
 
 ### Text
+
 Typography component with preset variants and colors.
 
 ```tsx
@@ -475,11 +490,13 @@ import { Text } from '../components';
 ```
 
 **Props:**
+
 - `variant`: 'h1' | 'h2' | 'h3' | 'bodyLarge' | 'body' | 'bodySmall' | 'caption' | 'label'
 - `color`: 'heading' | 'body' | 'muted' | 'hint' | 'primary' | 'accent' | 'correct' | 'wrong' | 'white'
 - `center`: boolean
 
 ### Button
+
 Configurable button component.
 
 ```tsx
@@ -490,6 +507,7 @@ import { Button } from '../components';
 ```
 
 **Props:**
+
 - `title`: string
 - `onPress`: () => void
 - `variant`: 'primary' | 'secondary' | 'outline' | 'ghost'
@@ -498,22 +516,25 @@ import { Button } from '../components';
 - `disabled`: boolean
 
 ### Card
+
 Container component with elevation.
 
 ```tsx
-import { Card } from '../components';
+import { Card } from "../components";
 
 <Card variant="elevated" padding="lg">
   <Text>Card content</Text>
-</Card>
+</Card>;
 ```
 
 **Props:**
+
 - `variant`: 'default' | 'elevated' | 'filled'
 - `padding`: 'none' | 'sm' | 'md' | 'lg'
 - `children`: ReactNode
 
 ### Badge
+
 Small label/tag component.
 
 ```tsx
@@ -524,27 +545,30 @@ import { Badge } from '../components';
 ```
 
 **Props:**
+
 - `label`: string
 - `variant`: 'primary' | 'accent' | 'correct' | 'streak' | 'muted'
 
 ### Container
+
 Screen container with safe area handling.
 
 ```tsx
-import { Container } from '../components';
+import { Container } from "../components";
 
 <Container backgroundColor={colors.primary} statusBarStyle="light-content">
   {/* Screen content */}
-</Container>
+</Container>;
 ```
 
 ### ProgressBar
+
 Progress indicator component.
 
 ```tsx
-import { ProgressBar } from '../components';
+import { ProgressBar } from "../components";
 
-<ProgressBar progress={0.75} color={colors.primary} />
+<ProgressBar progress={0.75} color={colors.primary} />;
 ```
 
 ---
@@ -553,21 +577,21 @@ import { ProgressBar } from '../components';
 
 ### Tab Screens
 
-| Screen | File | Description |
-|--------|------|-------------|
-| **Home** | `app/(tabs)/index.tsx` | Word of the Day, quick actions |
-| **Discover** | `app/(tabs)/discover.tsx` | Search, categories, bookmarks |
-| **Progress** | `app/(tabs)/progress.tsx` | Stats, streak, activity |
-| **Profile** | `app/(tabs)/profile.tsx` | User settings |
+| Screen       | File                      | Description                    |
+| ------------ | ------------------------- | ------------------------------ |
+| **Home**     | `app/(tabs)/index.tsx`    | Word of the Day, quick actions |
+| **Discover** | `app/(tabs)/discover.tsx` | Search, categories, bookmarks  |
+| **Progress** | `app/(tabs)/progress.tsx` | Stats, streak, activity        |
+| **Profile**  | `app/(tabs)/profile.tsx`  | User settings                  |
 
 ### Stack Screens
 
-| Screen | File | Description |
-|--------|------|-------------|
-| **Onboarding** | `app/onboarding.tsx` | First-time user flow |
-| **Quiz** | `app/quiz.tsx` | Vocabulary quiz |
-| **Word Detail** | `app/word/[id].tsx` | Full word information |
-| **Category** | `app/category/[category].tsx` | Words by category |
+| Screen          | File                          | Description           |
+| --------------- | ----------------------------- | --------------------- |
+| **Onboarding**  | `app/onboarding.tsx`          | First-time user flow  |
+| **Quiz**        | `app/quiz.tsx`                | Vocabulary quiz       |
+| **Word Detail** | `app/word/[id].tsx`           | Full word information |
+| **Category**    | `app/category/[category].tsx` | Words by category     |
 
 ---
 
@@ -586,7 +610,7 @@ interface Word {
   example?: string;
   synonyms: string[];
   antonyms: string[];
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: "easy" | "medium" | "hard";
   category: WordCategory;
   isBookmarked?: boolean;
   isLearned?: boolean;
@@ -598,15 +622,15 @@ interface Word {
 ### WordCategory
 
 ```typescript
-type WordCategory = 
-  | 'business'
-  | 'science'
-  | 'literature'
-  | 'technology'
-  | 'arts'
-  | 'history'
-  | 'everyday'
-  | 'academic';
+type WordCategory =
+  | "business"
+  | "science"
+  | "literature"
+  | "technology"
+  | "arts"
+  | "history"
+  | "everyday"
+  | "academic";
 ```
 
 ### WordProgress
@@ -627,7 +651,7 @@ interface WordProgress {
 ```typescript
 interface QuizQuestion {
   id: string;
-  type: 'multiple-choice' | 'fill-blank' | 'match-synonym';
+  type: "multiple-choice" | "fill-blank" | "match-synonym";
   word: Word;
   question: string;
   options: string[];
@@ -662,22 +686,22 @@ Location: `src/data/wordList.ts`
 
 ### Categories & Word Counts
 
-| Category | Description | Difficulty Distribution |
-|----------|-------------|------------------------|
-| **Everyday** | Common useful words | Easy: 10, Medium: 5 |
-| **Business** | Professional terms | Easy: 5, Medium: 5, Hard: 3 |
-| **Science** | Scientific vocabulary | Easy: 4, Medium: 6, Hard: 3 |
-| **Literature** | Literary terms | Easy: 4, Medium: 6, Hard: 3 |
-| **Technology** | Tech terminology | Easy: 3, Medium: 6, Hard: 3 |
-| **Arts** | Artistic vocabulary | Easy: 3, Medium: 4, Hard: 2 |
-| **History** | Historical terms | Easy: 3, Medium: 4, Hard: 2 |
-| **Academic** | Scholarly words | Easy: 3, Medium: 5, Hard: 3 |
+| Category       | Description           | Difficulty Distribution     |
+| -------------- | --------------------- | --------------------------- |
+| **Everyday**   | Common useful words   | Easy: 10, Medium: 5         |
+| **Business**   | Professional terms    | Easy: 5, Medium: 5, Hard: 3 |
+| **Science**    | Scientific vocabulary | Easy: 4, Medium: 6, Hard: 3 |
+| **Literature** | Literary terms        | Easy: 4, Medium: 6, Hard: 3 |
+| **Technology** | Tech terminology      | Easy: 3, Medium: 6, Hard: 3 |
+| **Arts**       | Artistic vocabulary   | Easy: 3, Medium: 4, Hard: 2 |
+| **History**    | Historical terms      | Easy: 3, Medium: 4, Hard: 2 |
+| **Academic**   | Scholarly words       | Easy: 3, Medium: 5, Hard: 3 |
 
 ### Utility Functions
 
 ```typescript
 // Get words by category
-const businessWords = getWordsByCategory('business');
+const businessWords = getWordsByCategory("business");
 
 // Get word for a specific date (deterministic)
 const todayWord = getWordForDate(new Date());
@@ -686,7 +710,7 @@ const todayWord = getWordForDate(new Date());
 const quizWords = getRandomWords(10);
 
 // Category metadata
-const categoryInfo = CATEGORY_INFO['business'];
+const categoryInfo = CATEGORY_INFO["business"];
 // { name: 'Business', icon: 'briefcase-outline', color: '#378ADD' }
 ```
 
@@ -714,12 +738,12 @@ The app uses **expo-router** for file-based routing.
 ### Navigation Examples
 
 ```typescript
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
 
 const router = useRouter();
 
 // Navigate to a screen
-router.push('/quiz');
+router.push("/quiz");
 
 // Navigate with params
 router.push(`/word/${wordId}`);
@@ -729,7 +753,7 @@ router.push(`/category/${categoryName}`);
 router.back();
 
 // Replace current screen
-router.replace('/(tabs)');
+router.replace("/(tabs)");
 ```
 
 ---
@@ -758,3 +782,27 @@ This project is for educational purposes.
 - **Dictionary API**: [Free Dictionary API](https://dictionaryapi.dev/)
 - **Icons**: [Ionicons](https://ionic.io/ionicons) via @expo/vector-icons
 - **Design System**: Custom "Sky & Coral" palette
+
+## conig setup
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+apiKey: "AIzaSyAEWkwInvhE5xkgF4ZTqKxWWGlaHsTW-TE",
+authDomain: "wordwise-695a3.firebaseapp.com",
+projectId: "wordwise-695a3",
+storageBucket: "wordwise-695a3.firebasestorage.app",
+messagingSenderId: "549372255118",
+appId: "1:549372255118:web:251b7fc0362f0bf11fa2df",
+measurementId: "G-0JWZ19D907"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);

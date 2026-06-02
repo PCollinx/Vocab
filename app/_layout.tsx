@@ -8,6 +8,8 @@ import { Alert } from 'react-native';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../src/services/firebase';
 import { useAppStore } from '../src/store/appStore';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { ErrorBoundary } from '../src/components';
@@ -25,6 +27,18 @@ function AppStatusBar() {
 export default function RootLayout() {
   const { loadUserData, addNotificationToHistory } = useAppStore();
   const cleanupNotifications = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      const current = useAppStore.getState();
+      useAppStore.setState({
+        isLoggedIn: !!user,
+        userEmail: user?.email ?? current.userEmail,
+        userName: user?.displayName ?? current.userName,
+      });
+    });
+    return () => unsubscribeAuth();
+  }, []);
 
   useEffect(() => {
     loadUserData();
