@@ -64,7 +64,8 @@ export default function AuthScreen() {
         useAppStore.getState().setUserName(result.user.displayName);
       }
       router.replace(hasCompletedOnboarding ? "/(tabs)" : "/onboarding");
-    } catch {
+    } catch (err: any) {
+      if (__DEV__) console.error("Google sign-in error:", err?.code, err?.message, err);
       setError("Google sign-in failed. Please try again.");
     } finally {
       setGoogleLoading(false);

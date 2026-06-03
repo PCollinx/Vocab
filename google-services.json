@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "549372255118",
+    "project_id": "wordwise-695a3",
+    "storage_bucket": "wordwise-695a3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:549372255118:android:09c2daecb490cf1c1fa2df",
+        "android_client_info": {
+          "package_name": "com.wordwise.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "549372255118-d1um0k07t0gn4442n4iakg6afe7vs02e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNSiiXKKNV_pY7VGuF-qFQr1TMUUkh7xQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "549372255118-d1um0k07t0gn4442n4iakg6afe7vs02e.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "549372255118-0dh043d953silcnikfn2lddcmlabp2fa.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.wordwise.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
