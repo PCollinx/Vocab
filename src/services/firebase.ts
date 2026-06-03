@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { initializeAuth, getAuth } from "firebase/auth";
+import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAEWkwInvhE5xkgF4ZTqKxWWGlaHsTW-TE",
@@ -11,6 +12,15 @@ const firebaseConfig = {
   measurementId: "G-0JWZ19D907",
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// getReactNativePersistence is exported by the RN build of firebase/auth
+// (resolved via metro.config.js custom resolver) but not in TS types, so use require.
+const { getReactNativePersistence } = require("firebase/auth");
 
-export const auth = getAuth(app);
+const isNew = getApps().length === 0;
+const app = isNew ? initializeApp(firebaseConfig) : getApps()[0];
+
+export const auth = isNew
+  ? initializeAuth(app, {
+      persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+    })
+  : getAuth(app);

@@ -39,7 +39,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.549372255118-0dh043d953silcnikfn2lddcmlabp2fa"
         }
-      ]
+      ],
+      "./plugins/withGoogleServices"
     ],
     "extra": {
       "privacyPolicyUrl": "https://pcollinx.github.io/wordwise-privacy/"

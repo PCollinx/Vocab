@@ -26,6 +26,8 @@ const LOOP_COUNT = 100;
 
 // ─── Per-card animated item ───────────────────────────────────────────────────
 
+const DOT_GAP = 8; // desired consistent gap between card bottom and dots
+
 interface CarouselItemProps {
   item: Word;
   index: number;
@@ -34,6 +36,7 @@ interface CarouselItemProps {
   isLearned: boolean;
   onNavigate: () => void;
   onBookmark: () => void;
+  onHeightChange?: (height: number) => void;
 }
 
 const CarouselCard = React.memo(({
@@ -44,6 +47,7 @@ const CarouselCard = React.memo(({
   isLearned,
   onNavigate,
   onBookmark,
+  onHeightChange,
 }: CarouselItemProps) => {
   const { colors } = useTheme();
 
@@ -67,6 +71,7 @@ const CarouselCard = React.memo(({
           transform: [{ scale: animations.scale }, { rotateZ: animations.rotateZ }],
           opacity: animations.opacity,
         }}
+        onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
       >
         <Card style={styles.wordCard}>
           {isLearned && (
@@ -177,6 +182,7 @@ export default function HomeScreen() {
 
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
   const [localActiveIndex, setLocalActiveIndex] = useState(0);
+  const [cardHeights, setCardHeights] = useState<Record<number, number>>({});
 
   useEffect(() => {
     fetchDailyWords();
@@ -266,11 +272,24 @@ export default function HomeScreen() {
           )}
           onNavigate={() => router.push(`/word/${word.id}`)}
           onBookmark={() => toggleBookmark(word)}
+          onHeightChange={(h) =>
+            setCardHeights((prev) =>
+              prev[realIndex] === h ? prev : { ...prev, [realIndex]: h }
+            )
+          }
         />
       );
     },
     [N, dailyWords, scrollX, isWordBookmarked, learnedWords, router, toggleBookmark]
   );
+
+  const maxCardHeight = cardHeights && Object.values(cardHeights).length > 0
+    ? Math.max(...Object.values(cardHeights))
+    : 0;
+  const activeCardHeight = cardHeights[localActiveIndex] ?? 0;
+  const dotsMarginTop = maxCardHeight > 0 && activeCardHeight > 0
+    ? Math.max(DOT_GAP, maxCardHeight - activeCardHeight + DOT_GAP)
+    : DOT_GAP;
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric", year: "numeric",
@@ -363,34 +382,35 @@ export default function HomeScreen() {
             </View>
           </Card>
         ) : N > 0 ? (
-          <View style={styles.carouselWrapper}>
-            <Animated.FlatList
-              ref={flatListRef as any}
-              data={loopedWords}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              scrollEventThrottle={16}
-              initialScrollIndex={getStartIndex(currentWordIndex)}
-              getItemLayout={getItemLayout}
-              keyExtractor={(_, index) => String(index)}
-              renderItem={renderItem}
-              onScrollBeginDrag={handleScrollBeginDrag}
-              onMomentumScrollEnd={handleMomentumScrollEnd}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                { useNativeDriver: false }
-              )}
-              onScrollToIndexFailed={({ index }) => {
-                requestAnimationFrame(() => {
-                  flatListRef.current?.scrollToIndex({ index, animated: false });
-                });
-              }}
-              style={{ zIndex: 2 }}
-            />
+          <>
+            <View style={styles.carouselWrapper}>
+              <Animated.FlatList
+                ref={flatListRef as any}
+                data={loopedWords}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                scrollEventThrottle={16}
+                initialScrollIndex={getStartIndex(currentWordIndex)}
+                getItemLayout={getItemLayout}
+                keyExtractor={(_, index) => String(index)}
+                renderItem={renderItem}
+                onScrollBeginDrag={handleScrollBeginDrag}
+                onMomentumScrollEnd={handleMomentumScrollEnd}
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                  { useNativeDriver: false }
+                )}
+                onScrollToIndexFailed={({ index }) => {
+                  requestAnimationFrame(() => {
+                    flatListRef.current?.scrollToIndex({ index, animated: false });
+                  });
+                }}
+              />
+            </View>
 
             {N > 1 && (
-              <View style={styles.paginationDots}>
+              <View style={[styles.paginationDots, { marginTop: dotsMarginTop }]}>
                 {dailyWords.map((_, index) => (
                   <View
                     key={index}
@@ -403,7 +423,7 @@ export default function HomeScreen() {
                 ))}
               </View>
             )}
-          </View>
+          </>
         ) : (
           <Card style={styles.singleCard}>
             <View style={styles.loadingContainer}>
@@ -569,7 +589,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08, shadowRadius: 24, elevation: 4,
   },
 
-  carouselWrapper: { marginTop: -34, marginBottom: spacing[2], zIndex: 1, elevation: 8 },
+  carouselWrapper: { marginTop: -34, zIndex: 1, elevation: 8 },
   carouselItem: { width: SCREEN_WIDTH, paddingHorizontal: spacing[4] },
   wordCard: {
     borderRadius: 28, paddingTop: spacing[5],
@@ -583,8 +603,7 @@ const styles = StyleSheet.create({
   },
   paginationDots: {
     flexDirection: "row", justifyContent: "center",
-    gap: spacing[2], marginTop: spacing[8], marginBottom: spacing[4],
-    zIndex: 1,
+    gap: spacing[2], marginBottom: spacing[3],
   },
   dot: { width: 6, height: 6, borderRadius: 3 },
 
@@ -613,7 +632,7 @@ const styles = StyleSheet.create({
 
   loadingContainer: { padding: spacing[7], alignItems: "center", justifyContent: "center" },
   retryBtn: { marginTop: spacing[5], paddingHorizontal: spacing[6], paddingVertical: spacing[3], borderRadius: borderRadius.full },
-  bottomSpacer: { height: spacing[20] },
+  bottomSpacer: { height: spacing[12] },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   modalContent: {
