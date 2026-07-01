@@ -6,6 +6,9 @@
 import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { Stack } from 'expo-router';
+import { initSentry } from '../src/services/sentry';
+
+initSentry();
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';

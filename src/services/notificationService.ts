@@ -8,6 +8,7 @@
  * `import type` is used only for TypeScript types — it compiles to nothing at runtime.
  */
 
+import { Platform } from 'react-native';
 import type * as NotificationsType from 'expo-notifications';
 import { Word } from '../types';
 
@@ -23,7 +24,6 @@ try {
 
   mod.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
       shouldShowBanner: true,
@@ -106,12 +106,18 @@ export async function scheduleWordReminders(
               ? { word: word.word, definition: word.definition }
               : {},
           },
-          trigger: {
-            type: SchedulableTriggerInputTypes.CALENDAR,
-            hour,
-            minute: startMinute,
-            repeats: true,
-          },
+          trigger: Platform.OS === 'android'
+            ? {
+                type: SchedulableTriggerInputTypes.DAILY,
+                hour,
+                minute: startMinute,
+              }
+            : {
+                type: SchedulableTriggerInputTypes.CALENDAR,
+                hour,
+                minute: startMinute,
+                repeats: true,
+              },
         });
         notificationIds.push(id);
       } catch (error) {

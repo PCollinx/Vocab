@@ -8,9 +8,11 @@ import {
   updateProfile as firebaseUpdateProfile,
   reauthenticateWithCredential,
   EmailAuthProvider,
+  GoogleAuthProvider,
   updatePassword,
   deleteUser,
 } from 'firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { auth } from '../services/firebase';
 import { Word, WordProgress, QuizSession } from "../types";
 import { getWord, getWords, searchWords } from "../services/dictionaryApi";
@@ -152,7 +154,7 @@ interface AppState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (updates: { name?: string; bio?: string; age?: number; newPassword?: string; currentPassword: string }) => Promise<{ success: boolean; error?: string }>;
-  deleteAccount: (password: string) => Promise<{ success: boolean; error?: string }>;
+  deleteAccount: (password?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const initialState = {
@@ -669,12 +671,23 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      deleteAccount: async (password: string) => {
+      deleteAccount: async (password?: string) => {
         const user = auth.currentUser;
-        if (!user || !user.email) return { success: false, error: 'Not logged in.' };
+        if (!user) return { success: false, error: 'Not logged in.' };
         try {
-          const credential = EmailAuthProvider.credential(user.email, password);
-          await reauthenticateWithCredential(user, credential);
+          const provider = user.providerData[0]?.providerId;
+          if (provider === 'google.com') {
+            await GoogleSignin.hasPlayServices();
+            await GoogleSignin.signIn();
+            const { idToken } = await GoogleSignin.getTokens();
+            if (!idToken) throw new Error('No ID token');
+            const credential = GoogleAuthProvider.credential(idToken);
+            await reauthenticateWithCredential(user, credential);
+          } else {
+            if (!user.email || !password) return { success: false, error: 'Password is required.' };
+            const credential = EmailAuthProvider.credential(user.email, password);
+            await reauthenticateWithCredential(user, credential);
+          }
           await deleteUser(user);
           set({ ...initialState, isLoading: false, hasCompletedOnboarding: true });
           return { success: true };

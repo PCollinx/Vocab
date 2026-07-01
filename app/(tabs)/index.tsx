@@ -26,7 +26,7 @@ const LOOP_COUNT = 100;
 
 // ─── Per-card animated item ───────────────────────────────────────────────────
 
-const DOT_GAP = 8; // desired consistent gap between card bottom and dots
+const DOT_GAP = 36; // desired consistent gap between card bottom and dots
 
 interface CarouselItemProps {
   item: Word;
@@ -283,12 +283,14 @@ export default function HomeScreen() {
     [N, dailyWords, scrollX, isWordBookmarked, learnedWords, router, toggleBookmark]
   );
 
-  const maxCardHeight = cardHeights && Object.values(cardHeights).length > 0
+  const maxCardHeight = Object.values(cardHeights).length > 0
     ? Math.max(...Object.values(cardHeights))
     : 0;
   const activeCardHeight = cardHeights[localActiveIndex] ?? 0;
+  // Negative margin pulls dots up into the whitespace below shorter cards,
+  // so dots always sit DOT_GAP below each card's actual content bottom.
   const dotsMarginTop = maxCardHeight > 0 && activeCardHeight > 0
-    ? Math.max(DOT_GAP, maxCardHeight - activeCardHeight + DOT_GAP)
+    ? -(maxCardHeight - activeCardHeight) + DOT_GAP
     : DOT_GAP;
 
   const today = new Date().toLocaleDateString("en-US", {
@@ -593,8 +595,8 @@ const styles = StyleSheet.create({
   carouselItem: { width: SCREEN_WIDTH, paddingHorizontal: spacing[4] },
   wordCard: {
     borderRadius: 28, paddingTop: spacing[5],
-    shadowColor: "#000", shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1, shadowRadius: 24, elevation: 6,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1, shadowRadius: 8, elevation: 6,
   },
   learnedBanner: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",

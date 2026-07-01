@@ -22,6 +22,7 @@ import { useAppStore } from "../../src/store/appStore";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
+import { auth } from "../../src/services/firebase";
 import {
   scheduleWordReminders,
   cancelAllNotifications,
@@ -82,6 +83,7 @@ export default function ProfileScreen() {
   const [deletePassword, setDeletePassword] = useState("");
   const [showDeletePw, setShowDeletePw] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const isGoogleUser = auth.currentUser?.providerData[0]?.providerId === 'google.com';
 
   const openEditProfile = () => {
     setEditName(userName ?? "");
@@ -146,8 +148,8 @@ export default function ProfileScreen() {
 
   const handleDeleteAccount = async () => {
     setDeleteError("");
-    if (!deletePassword) return setDeleteError("Enter your password to confirm.");
-    const result = await deleteAccount(deletePassword);
+    if (!isGoogleUser && !deletePassword) return setDeleteError("Enter your password to confirm.");
+    const result = await deleteAccount(isGoogleUser ? undefined : deletePassword);
     if (!result.success) return setDeleteError(result.error ?? "Deletion failed.");
     setShowDeleteModal(false);
     router.replace("/auth");
@@ -918,6 +920,7 @@ export default function ProfileScreen() {
               </Pressable>
             </View>
 
+            <ScrollView showsVerticalScrollIndicator={false}>
             <View
               style={[
                 styles.feedbackBox,
@@ -958,48 +961,56 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            <Text variant="label" color="muted" style={styles.editLabel}>
-              Enter your password to confirm
-            </Text>
-            <View
-              style={[
-                styles.editInputRow,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Ionicons
-                name="key-outline"
-                size={17}
-                color={colors.textMuted}
-                style={styles.editInputIcon}
-              />
-              <TextInput
-                style={[
-                  styles.editInput,
-                  styles.editInputFlex,
-                  { color: colors.textHeading },
-                ]}
-                value={deletePassword}
-                onChangeText={setDeletePassword}
-                placeholder="Current password"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry={!showDeletePw}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowDeletePw(!showDeletePw)}
-                style={styles.eyeBtn}
-              >
-                <Ionicons
-                  name={showDeletePw ? "eye-off-outline" : "eye-outline"}
-                  size={17}
-                  color={colors.textMuted}
-                />
-              </TouchableOpacity>
-            </View>
+            {isGoogleUser ? (
+              <Text variant="bodySmall" color="muted" style={{ marginBottom: spacing[4] }}>
+                You'll be asked to sign in with Google to confirm your identity before deletion.
+              </Text>
+            ) : (
+              <>
+                <Text variant="label" color="muted" style={styles.editLabel}>
+                  Enter your password to confirm
+                </Text>
+                <View
+                  style={[
+                    styles.editInputRow,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="key-outline"
+                    size={17}
+                    color={colors.textMuted}
+                    style={styles.editInputIcon}
+                  />
+                  <TextInput
+                    style={[
+                      styles.editInput,
+                      styles.editInputFlex,
+                      { color: colors.textHeading },
+                    ]}
+                    value={deletePassword}
+                    onChangeText={setDeletePassword}
+                    placeholder="Current password"
+                    placeholderTextColor={colors.textMuted}
+                    secureTextEntry={!showDeletePw}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowDeletePw(!showDeletePw)}
+                    style={styles.eyeBtn}
+                  >
+                    <Ionicons
+                      name={showDeletePw ? "eye-off-outline" : "eye-outline"}
+                      size={17}
+                      color={colors.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
 
             <TouchableOpacity
               style={[
@@ -1012,6 +1023,7 @@ export default function ProfileScreen() {
                 Delete My Account
               </Text>
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
