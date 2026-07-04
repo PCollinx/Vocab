@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "549372255118-f3ckmf9qsiim7p2sklp5d5vmjn4duikg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.wordwise.app",
+            "certificate_hash": "d93b15450ad3d250878b2b88bd21cacf0b1f2728"
+          }
+        },
+        {
           "client_id": "549372255118-g0ir6g8mhglad0t57ah5kqpg4mcokffp.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
