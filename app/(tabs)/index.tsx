@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { Container, Text, Card, Badge } from "../../src/components";
 import { spacing, borderRadius } from "../../src/constants";
 import { useTheme } from "../../src/context/ThemeContext";
@@ -57,6 +58,17 @@ const CarouselCard = React.memo(
     onHeightChange,
   }: CarouselItemProps) => {
     const { colors } = useTheme();
+    const player = useAudioPlayer(item.audioUrl ?? null);
+    const playerStatus = useAudioPlayerStatus(player);
+    const isPlaying = playerStatus?.playing ?? false;
+
+    const playPronunciation = () => {
+      if (!item.audioUrl || isPlaying) return;
+      try {
+        player.seekTo(0);
+        player.play();
+      } catch {}
+    };
 
     const animations = useRef(() => {
       const inputRange = [
@@ -132,15 +144,25 @@ const CarouselCard = React.memo(
               <Text variant="bodySmall" color="muted">
                 Pronunciation:
               </Text>
-              <View
-                style={[
-                  styles.phonetic,
-                  { backgroundColor: colors.primaryLight },
-                ]}
-              >
-                <Text variant="body" color="body">
-                  {item.pronunciation || "N/A"}
-                </Text>
+              <View style={styles.phoneticRow}>
+                <View style={[styles.phonetic, { backgroundColor: colors.primaryLight }]}>
+                  <Text variant="body" color="body">
+                    {item.pronunciation || "N/A"}
+                  </Text>
+                </View>
+                {item.audioUrl && (
+                  <TouchableOpacity
+                    onPress={playPronunciation}
+                    style={[styles.speakerBtn, { backgroundColor: colors.primaryLight }]}
+                    disabled={isPlaying}
+                  >
+                    <Ionicons
+                      name={isPlaying ? "volume-high" : "volume-medium-outline"}
+                      size={18}
+                      color={colors.primary}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -898,6 +920,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing[3],
     gap: spacing[2],
   },
+  phoneticRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
   phonetic: {
     flexDirection: "row",
     alignItems: "center",
@@ -905,6 +932,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[1],
     borderRadius: borderRadius.full,
     gap: spacing[1],
+  },
+  speakerBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   meaningSection: { marginTop: spacing[3] },
   sectionLabelRow: {

@@ -83,18 +83,22 @@ export async function scheduleWordReminders(
     await cancelAllNotifications();
 
     const [startHour, startMinute] = reminderTime.split(':').map(Number);
-    const SLOTS = 4;
+    const SLOTS = Math.min(words.length, 5);
+    // Spread notifications evenly over 12 hours from start time
+    const spacingMinutes = SLOTS > 1 ? Math.floor((12 * 60) / SLOTS) : 0;
     const notificationIds: string[] = [];
 
     for (let i = 0; i < SLOTS; i++) {
-      const hour = (startHour + i * 4) % 24;
+      const totalMinutes = startHour * 60 + startMinute + i * spacingMinutes;
+      const hour = Math.floor(totalMinutes / 60) % 24;
+      const minute = totalMinutes % 60;
 
-      // Pick a word for this slot — cycle through available words
-      const word = words.length > 0 ? words[i % words.length] : null;
+      // Each slot gets its own word
+      const word = words[i] ?? null;
 
-      const title = '📚 WordWise';
+      const title = '📚 WordWise — Word of the Hour';
       const body = word
-        ? `Do you know what "${word.word}" means? Open WordWise to learn today's words.`
+        ? `Today's word: "${word.word}" — do you know what it means? Tap to find out!`
         : "Your daily words are waiting. Open WordWise and keep your streak alive! 🔥";
 
       try {
@@ -110,12 +114,12 @@ export async function scheduleWordReminders(
             ? {
                 type: SchedulableTriggerInputTypes.DAILY,
                 hour,
-                minute: startMinute,
+                minute,
               }
             : {
                 type: SchedulableTriggerInputTypes.CALENDAR,
                 hour,
-                minute: startMinute,
+                minute,
                 repeats: true,
               },
         });
