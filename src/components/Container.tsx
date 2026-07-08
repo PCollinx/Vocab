@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, Edge } from "react-native-safe-area-context";
 import { useTheme } from "../context/ThemeContext";
 import { spacing } from "../constants/spacing";
 
@@ -9,6 +9,7 @@ interface ContainerProps {
   style?: ViewStyle;
   padded?: boolean;
   safeArea?: boolean;
+  edges?: Edge[];
   backgroundColor?: string;
 }
 
@@ -17,6 +18,7 @@ export const Container: React.FC<ContainerProps> = ({
   style,
   padded = true,
   safeArea = true,
+  edges = ['top', 'left', 'right'],
   backgroundColor,
 }) => {
   const { colors } = useTheme();
@@ -24,7 +26,7 @@ export const Container: React.FC<ContainerProps> = ({
   const bg = backgroundColor ?? colors.background;
 
   return (
-    <Wrapper style={[styles.container, { backgroundColor: bg }, style]}>
+    <Wrapper edges={safeArea ? edges : undefined} style={[styles.container, { backgroundColor: bg }, style]}>
       <View style={[styles.content, padded && styles.padded]}>{children}</View>
     </Wrapper>
   );

@@ -104,7 +104,7 @@ export default function WordDetailScreen() {
 
   if (isLoading) {
     return (
-      <Container backgroundColor={colors.primary}>
+      <Container backgroundColor={colors.primary} edges={["top","bottom","left","right"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.white} />
           <Text variant="body" color="white" style={{ marginTop: spacing[3] }}>
@@ -117,7 +117,7 @@ export default function WordDetailScreen() {
 
   if (!word) {
     return (
-      <Container backgroundColor={colors.primary}>
+      <Container backgroundColor={colors.primary} edges={["top","bottom","left","right"]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color={colors.white} />
@@ -145,7 +145,7 @@ export default function WordDetailScreen() {
   }
 
   return (
-    <Container backgroundColor={colors.primary}>
+    <Container backgroundColor={colors.primary} edges={["top","bottom","left","right"]}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>

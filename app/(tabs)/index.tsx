@@ -725,7 +725,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 120 },
+  scrollContent: { paddingBottom: 0 },
 
   hero: {
     position: "relative",
@@ -948,6 +948,7 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     borderRadius: borderRadius.xl,
     marginTop: spacing[3],
+    marginBottom: spacing[4],
   },
   quizContent: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
   quizIcon: {
@@ -972,7 +973,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
     borderRadius: borderRadius.full,
   },
-  bottomSpacer: { height: spacing[12] },
+  bottomSpacer: { height: 0 },
 
   modalOverlay: {
     flex: 1,

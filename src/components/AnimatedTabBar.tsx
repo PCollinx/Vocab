@@ -50,7 +50,6 @@ function TabIcon({ label, focused, iconName, iconNameFocused, colors }: TabIconP
       <Animated.Text style={[styles.tabLabel, { color: labelColor, opacity: labelOpacity }]}>
         {label}
       </Animated.Text>
-      {focused && <View style={[styles.activeIndicator, { backgroundColor: colors.primary }]} />}
     </View>
   );
 }
@@ -94,7 +93,10 @@ export function AnimatedTabBar({ state, navigation }: any) {
           <Pressable
             key={route.key}
             onPress={onPress}
-            style={styles.tabButton}
+            style={[
+              styles.tabButton,
+              { borderTopColor: isFocused ? colors.primary : 'transparent' },
+            ]}
             android_ripple={{ color: colors.primaryLight, borderless: false }}
           >
             <TabIcon
@@ -127,6 +129,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 10,
     paddingBottom: 6,
+    borderTopWidth: 2,
   },
   tabItem: {
     alignItems: 'center',
@@ -138,12 +141,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.2,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: -14,
-    width: 24,
-    height: 3,
-    borderRadius: 2,
   },
 });
