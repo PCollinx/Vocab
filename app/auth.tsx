@@ -8,11 +8,12 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons, AntDesign } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
+import { GoogleAuthProvider, signInWithCredential, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../src/services/firebase";
 import { Text, Button } from "../src/components";
 import { spacing, borderRadius } from "../src/constants";
@@ -44,6 +45,11 @@ export default function AuthScreen() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState("");
 
   const switchMode = (next: "login" | "signup") => {
     setMode(next);
@@ -109,6 +115,29 @@ export default function AuthScreen() {
       if (!result.success) return setError(result.error ?? "Login failed.");
       router.replace(hasCompletedOnboarding ? "/(tabs)" : "/onboarding");
     }
+  };
+
+  const handleForgotPassword = async () => {
+    setResetError("");
+    if (!resetEmail.trim() || !/\S+@\S+\.\S+/.test(resetEmail)) {
+      return setResetError("Please enter a valid email address.");
+    }
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail.toLowerCase().trim());
+      setResetSent(true);
+    } catch (err: any) {
+      setResetError("No account found with that email.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false);
+    setResetEmail("");
+    setResetSent(false);
+    setResetError("");
   };
 
   return (
@@ -364,6 +393,15 @@ export default function AuthScreen() {
             </View>
           )}
 
+          {mode === "login" && (
+            <TouchableOpacity
+              style={styles.forgotRow}
+              onPress={() => setShowForgotPassword(true)}
+            >
+              <Text variant="bodySmall" color="primary">Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
+
           <Button
             title={mode === "login" ? "Log In" : "Create Account"}
             onPress={handleSubmit}
@@ -423,6 +461,84 @@ export default function AuthScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <Modal
+        visible={showForgotPassword}
+        transparent
+        animationType="slide"
+        onRequestClose={closeForgotPassword}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={closeForgotPassword} />
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+
+            <Text variant="h4" color="heading" style={styles.modalTitle}>Reset Password</Text>
+
+            {resetSent ? (
+              <View style={styles.resetSentContainer}>
+                <View style={[styles.resetSentIcon, { backgroundColor: colors.correctLight }]}>
+                  <Ionicons name="mail-open-outline" size={32} color={colors.correct} />
+                </View>
+                <Text variant="body" color="heading" style={styles.resetSentTitle}>Check your email</Text>
+                <Text variant="bodySmall" color="muted" style={styles.resetSentSubtext}>
+                  We've sent a password reset link to {resetEmail}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.resetDoneBtn, { backgroundColor: colors.primary }]}
+                  onPress={closeForgotPassword}
+                >
+                  <Text variant="button" color="white">Done</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text variant="bodySmall" color="muted" style={styles.modalSubtext}>
+                  Enter your email address and we'll send you a link to reset your password.
+                </Text>
+
+                {!!resetError && (
+                  <View style={[styles.errorBox, { backgroundColor: colors.wrongLight }]}>
+                    <Ionicons name="alert-circle-outline" size={16} color={colors.wrong} />
+                    <Text variant="bodySmall" style={{ color: colors.wrong, flex: 1 }}>{resetError}</Text>
+                  </View>
+                )}
+
+                <View style={[styles.inputRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.textHeading }]}
+                    placeholder="Email address"
+                    placeholderTextColor={colors.textMuted}
+                    value={resetEmail}
+                    onChangeText={setResetEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.resetBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleForgotPassword}
+                  disabled={resetLoading}
+                >
+                  {resetLoading
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text variant="button" color="white">Send Reset Link</Text>
+                  }
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.cancelBtn} onPress={closeForgotPassword}>
+                  <Text variant="bodySmall" color="muted">Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -501,6 +617,52 @@ const styles = StyleSheet.create({
   },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { marginHorizontal: spacing[3] },
+  forgotRow: {
+    alignSelf: "flex-end",
+    marginTop: -spacing[1],
+    marginBottom: spacing[3],
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  modalSheet: {
+    borderTopLeftRadius: borderRadius["3xl"],
+    borderTopRightRadius: borderRadius["3xl"],
+    padding: spacing[6],
+    paddingBottom: spacing[10],
+  },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: borderRadius.full,
+    alignSelf: "center", marginBottom: spacing[5],
+  },
+  modalTitle: { marginBottom: spacing[2] },
+  modalSubtext: { marginBottom: spacing[5], lineHeight: 20 },
+  resetBtn: {
+    height: 50, borderRadius: borderRadius.lg,
+    alignItems: "center", justifyContent: "center",
+    marginTop: spacing[2],
+  },
+  cancelBtn: {
+    alignItems: "center", marginTop: spacing[4],
+  },
+  resetSentContainer: { alignItems: "center", paddingVertical: spacing[4] },
+  resetSentIcon: {
+    width: 72, height: 72, borderRadius: borderRadius.full,
+    justifyContent: "center", alignItems: "center",
+    marginBottom: spacing[4],
+  },
+  resetSentTitle: { fontWeight: "700", marginBottom: spacing[2] },
+  resetSentSubtext: { textAlign: "center", lineHeight: 20, marginBottom: spacing[6] },
+  resetDoneBtn: {
+    height: 50, borderRadius: borderRadius.lg,
+    alignItems: "center", justifyContent: "center",
+    paddingHorizontal: spacing[10],
+  },
   googleBtn: {
     flexDirection: "row",
     alignItems: "center",
