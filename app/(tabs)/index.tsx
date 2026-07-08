@@ -15,6 +15,7 @@ import {
   FlatList,
   Pressable,
   Dimensions,
+  NativeModules,
   Animated,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -27,6 +28,11 @@ import { spacing, borderRadius } from "../../src/constants";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useAppStore } from "../../src/store/appStore";
 import { Word } from "../../src/types";
+
+// True only when the ExpoSpeech native module is present in the current build.
+// Avoids importing expo-speech at module level so Metro doesn't bundle it
+// eagerly and crash dev clients built before expo-speech was added.
+const hasSpeech = !!NativeModules.ExpoSpeech;
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const LOOP_COUNT = 100;
@@ -62,12 +68,20 @@ const CarouselCard = React.memo(
     const playerStatus = useAudioPlayerStatus(player);
     const isPlaying = playerStatus?.playing ?? false;
 
-    const playPronunciation = () => {
-      if (!item.audioUrl || isPlaying) return;
-      try {
-        player.seekTo(0);
-        player.play();
-      } catch {}
+    const playPronunciation = async () => {
+      if (isPlaying) return;
+      if (item.audioUrl) {
+        try {
+          player.seekTo(0);
+          player.play();
+        } catch {}
+      } else if (hasSpeech) {
+        try {
+          const S = require("expo-speech");
+          const speaking = await S.isSpeakingAsync();
+          if (!speaking) S.speak(item.word, { language: 'en' });
+        } catch {}
+      }
     };
 
     const animations = useRef(() => {
@@ -150,7 +164,7 @@ const CarouselCard = React.memo(
                     {item.pronunciation || "N/A"}
                   </Text>
                 </View>
-                {item.audioUrl && (
+                {(item.audioUrl || hasSpeech) && (
                   <TouchableOpacity
                     onPress={playPronunciation}
                     style={[styles.speakerBtn, { backgroundColor: colors.primaryLight }]}

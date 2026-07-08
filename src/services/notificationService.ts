@@ -31,6 +31,16 @@ try {
     }),
   });
 
+  // Android 8+ requires a notification channel or notifications are silently dropped.
+  // AndroidImportance enum: DEFAULT=5, HIGH=6 (not re-exported from main index)
+  if (Platform.OS === 'android') {
+    mod.setNotificationChannelAsync('default', {
+      name: 'WordWise Reminders',
+      importance: 5,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  }
+
   notificationsAvailable = true;
 } catch {
   if (__DEV__) console.warn('expo-notifications: not available in this environment. Use a development build for full notification support.');
@@ -69,10 +79,8 @@ export async function cancelAllNotifications(): Promise<void> {
 }
 
 /**
- * Schedules 4 daily repeating reminders spaced 4 hours apart starting from
- * reminderTime. Each slot teases one word from the user's daily carousel to
- * draw them back into the app. Notifications repeat every day without
- * requiring the app to be opened.
+ * Schedules up to 5 daily repeating reminders spread evenly over 12 hours
+ * starting from reminderTime. Each slot is tied to a specific daily word.
  */
 export async function scheduleWordReminders(
   words: Word[],
@@ -115,6 +123,7 @@ export async function scheduleWordReminders(
                 type: SchedulableTriggerInputTypes.DAILY,
                 hour,
                 minute,
+                channelId: 'default',
               }
             : {
                 type: SchedulableTriggerInputTypes.CALENDAR,
@@ -153,6 +162,7 @@ export async function scheduleTestNotification(
         type: SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds: delaySeconds,
         repeats: false,
+        ...(Platform.OS === 'android' && { channelId: 'default' }),
       },
     });
   } catch (error) {
