@@ -84,6 +84,7 @@ interface AppState {
   dailyGoal: number;
   reminderEnabled: boolean;
   reminderTime: string;
+  notificationInterval: number; // hours between each notification (1, 2, 3, or 4)
 
   // Notification History
   notificationHistory: {
@@ -113,6 +114,8 @@ interface AppState {
 
   // Daily Carousel actions
   fetchDailyWords: () => Promise<void>;
+  refreshDailyWords: () => Promise<void>;
+  removeDailyWord: (wordId: string) => void;
   advanceToNextWord: () => void;
   setCurrentWordIndex: (index: number) => void;
 
@@ -142,6 +145,7 @@ interface AppState {
   setDailyGoal: (goal: number) => void;
   setReminderEnabled: (enabled: boolean) => void;
   setReminderTime: (time: string) => void;
+  setNotificationInterval: (hours: number) => void;
 
   // Notification History actions
   addNotificationToHistory: (item: { id: string; word: string; definition: string }) => void;
@@ -187,6 +191,7 @@ const initialState = {
   dailyGoal: 5,
   reminderEnabled: true,
   reminderTime: '09:00',
+  notificationInterval: 2,
   notificationHistory: [],
   isDarkMode: false,
   isLoggedIn: false,
@@ -301,6 +306,32 @@ export const useAppStore = create<AppState>()(
           if (__DEV__) console.error('Error fetching daily words:', error);
           set({ isLoadingDailyWords: false, dailyWordsError: true });
         }
+      },
+
+      refreshDailyWords: async () => {
+        set({ isLoadingDailyWords: true, dailyWordsError: false });
+        try {
+          const { dailyGoal } = get();
+          const goal = Math.max(1, dailyGoal);
+          const todayEntry = getWordForDate(new Date());
+          const extras = getRandomWords(goal + 2)
+            .filter(w => w.word !== todayEntry.word)
+            .slice(0, goal - 1);
+          const words = await getWords([todayEntry, ...extras]);
+          if (words.length === 0) throw new Error('No words returned');
+          const today = new Date().toISOString().split('T')[0];
+          set({ dailyWords: words, dailyWordsDate: today, currentWordIndex: 0, isLoadingDailyWords: false, dailyWordsError: false });
+        } catch (error) {
+          if (__DEV__) console.error('Error refreshing daily words:', error);
+          set({ isLoadingDailyWords: false, dailyWordsError: true });
+        }
+      },
+
+      removeDailyWord: (wordId: string) => {
+        const { dailyWords, currentWordIndex } = get();
+        const filtered = dailyWords.filter(w => w.word.toLowerCase() !== wordId.toLowerCase());
+        const newIndex = Math.min(currentWordIndex, Math.max(0, filtered.length - 1));
+        set({ dailyWords: filtered, currentWordIndex: newIndex });
       },
 
       advanceToNextWord: () => {
@@ -609,6 +640,10 @@ export const useAppStore = create<AppState>()(
         set({ reminderTime: time });
       },
 
+      setNotificationInterval: (hours: number) => {
+        set({ notificationInterval: hours });
+      },
+
       addNotificationToHistory: (item) => {
         const { notificationHistory } = get();
         if (notificationHistory.some((n) => n.id === item.id)) return;
@@ -724,6 +759,7 @@ export const useAppStore = create<AppState>()(
         dailyGoal: state.dailyGoal,
         reminderEnabled: state.reminderEnabled,
         reminderTime: state.reminderTime,
+        notificationInterval: state.notificationInterval,
         notificationHistory: state.notificationHistory,
         isDarkMode: state.isDarkMode,
         isLoggedIn: state.isLoggedIn,

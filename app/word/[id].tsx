@@ -95,7 +95,8 @@ export default function WordDetailScreen() {
   };
 
   const handleMarkLearned = () => {
-    if (word) markWordLearned(word.word);
+    if (!word) return;
+    markWordLearned(word.word);
   };
 
   const handleBookmark = () => {

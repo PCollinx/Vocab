@@ -17,6 +17,7 @@ import {
   Dimensions,
   NativeModules,
   Animated,
+  RefreshControl,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
@@ -286,26 +287,54 @@ export default function HomeScreen() {
     isLoadingDailyWords,
     dailyWordsError,
     fetchDailyWords,
+    refreshDailyWords,
     setCurrentWordIndex,
     learnedWords,
   } = useAppStore();
 
+  const todayKey = new Date().toISOString().split('T')[0];
+  const todayLearnedCount = learnedWords.filter(
+    w => w.lastReviewed?.startsWith(todayKey)
+  ).length;
+
+  // Filter out already-learned words so the carousel never shows them again
+  const unlearnedDailyWords = useMemo(() =>
+    dailyWords.filter(w =>
+      !learnedWords.some(l => l.wordId.toLowerCase() === w.word.toLowerCase())
+    ),
+    [dailyWords, learnedWords]
+  );
+
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
   const [localActiveIndex, setLocalActiveIndex] = useState(0);
   const [cardHeights, setCardHeights] = useState<Record<number, number>>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshDailyWords();
+    setIsRefreshing(false);
+  };
 
   useEffect(() => {
     fetchDailyWords();
   }, []);
 
-  const N = dailyWords.length;
+  // Auto-fetch more words when all or nearly all are learned
+  useEffect(() => {
+    if (unlearnedDailyWords.length < 2 && !isLoadingDailyWords && dailyWords.length > 0) {
+      refreshDailyWords();
+    }
+  }, [unlearnedDailyWords.length]);
+
+  const N = unlearnedDailyWords.length;
 
   const loopedWords = useMemo(
     () =>
       N > 0
-        ? Array.from({ length: LOOP_COUNT * N }, (_, i) => dailyWords[i % N])
+        ? Array.from({ length: LOOP_COUNT * N }, (_, i) => unlearnedDailyWords[i % N])
         : [],
-    [dailyWords, N],
+    [unlearnedDailyWords, N],
   );
 
   const getStartIndex = useCallback(
@@ -373,7 +402,7 @@ export default function HomeScreen() {
   const renderItem = useCallback(
     ({ item, index }: { item: Word; index: number }) => {
       const realIndex = index % N;
-      const word = dailyWords[realIndex] ?? item;
+      const word = unlearnedDailyWords[realIndex] ?? item;
       return (
         <CarouselCard
           item={word}
@@ -429,6 +458,16 @@ export default function HomeScreen() {
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        alwaysBounceVertical={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+            progressViewOffset={10}
+          />
+        }
       >
         {/* Hero — always primary blue, same in dark/light */}
         <View style={styles.hero}>
@@ -539,7 +578,19 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
           </Card>
-        ) : N > 0 ? (
+        ) : N === 0 && todayLearnedCount >= 20 ? (
+          <Card style={styles.singleCard}>
+            <View style={styles.loadingContainer}>
+              <Ionicons name="checkmark-circle-outline" size={48} color={colors.correct} />
+              <Text variant="h4" color="heading" style={{ marginTop: spacing[3] }}>
+                All caught up!
+              </Text>
+              <Text variant="body" color="muted" style={{ marginTop: spacing[2], textAlign: "center" }}>
+                You've learned {todayLearnedCount} words today. Come back tomorrow for more!
+              </Text>
+            </View>
+          </Card>
+        ) : (
           <>
             <View style={styles.carouselWrapper}>
               <Animated.FlatList
@@ -574,7 +625,7 @@ export default function HomeScreen() {
               <View
                 style={[styles.paginationDots, { marginTop: dotsMarginTop }]}
               >
-                {dailyWords.map((_, index) => (
+                {unlearnedDailyWords.map((_, index) => (
                   <View
                     key={index}
                     style={[
@@ -590,23 +641,6 @@ export default function HomeScreen() {
               </View>
             )}
           </>
-        ) : (
-          <Card style={styles.singleCard}>
-            <View style={styles.loadingContainer}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={40}
-                color={colors.textMuted}
-              />
-              <Text
-                variant="body"
-                color="muted"
-                style={{ marginTop: spacing[3] }}
-              >
-                Unable to load words. Pull to refresh.
-              </Text>
-            </View>
-          </Card>
         )}
 
         {/* Quick Quiz */}

@@ -79,21 +79,22 @@ export async function cancelAllNotifications(): Promise<void> {
 }
 
 /**
- * Schedules up to 5 daily repeating reminders spread evenly over 12 hours
- * starting from reminderTime. Each slot is tied to a specific daily word.
+ * Schedules up to 5 daily repeating reminders starting from reminderTime,
+ * each spaced intervalHours apart. Each slot is tied to a specific daily word.
  */
 export async function scheduleWordReminders(
   words: Word[],
-  reminderTime: string
+  reminderTime: string,
+  intervalHours: number = 2
 ): Promise<boolean> {
   if (!notificationsAvailable || !Notifications || !SchedulableTriggerInputTypes) return false;
+  if (words.length === 0) return false; // Don't cancel existing notifications if we have nothing to replace them with
   try {
     await cancelAllNotifications();
 
     const [startHour, startMinute] = reminderTime.split(':').map(Number);
     const SLOTS = Math.min(words.length, 5);
-    // Spread notifications evenly over 12 hours from start time
-    const spacingMinutes = SLOTS > 1 ? Math.floor((12 * 60) / SLOTS) : 0;
+    const spacingMinutes = intervalHours * 60;
     const notificationIds: string[] = [];
 
     for (let i = 0; i < SLOTS; i++) {

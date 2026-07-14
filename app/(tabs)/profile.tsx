@@ -45,6 +45,8 @@ export default function ProfileScreen() {
     setReminderEnabled,
     reminderTime,
     setReminderTime,
+    notificationInterval,
+    setNotificationInterval,
     updateProfile,
     deleteAccount,
     logout,
@@ -196,24 +198,25 @@ export default function ProfileScreen() {
     })();
   }, []);
 
-  useEffect(() => {
-    if (reminderEnabled) {
-      scheduleNotifications();
-    } else {
-      cancelAllNotifications();
-    }
-  }, [dailyGoal, reminderTime, reminderEnabled]);
-
   const scheduleNotifications = async () => {
+    if (dailyWords.length === 0) return; // Words not loaded yet — don't cancel existing notifications
     try {
       setIsSchedulingNotifications(true);
-      await scheduleWordReminders(dailyWords, reminderTime);
+      await scheduleWordReminders(dailyWords, reminderTime, notificationInterval);
     } catch (error) {
       if (__DEV__) console.error("Error scheduling notifications:", error);
     } finally {
       setIsSchedulingNotifications(false);
     }
   };
+
+  useEffect(() => {
+    if (reminderEnabled) {
+      scheduleNotifications();
+    } else {
+      cancelAllNotifications();
+    }
+  }, [dailyGoal, reminderTime, reminderEnabled, notificationInterval, dailyWords.length]);
 
   const handlePickImage = async (useCamera: boolean) => {
     try {
@@ -486,7 +489,7 @@ export default function ProfileScreen() {
                 style={styles.settingIcon}
               />
               <Text variant="body" color="heading">
-                Reminder Time
+                First Reminder
               </Text>
             </View>
             <View style={styles.settingValue}>
@@ -500,6 +503,43 @@ export default function ProfileScreen() {
               />
             </View>
           </TouchableOpacity>
+
+          <View style={[styles.settingItem, { borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'column', alignItems: 'flex-start', gap: spacing[3] }]}>
+            <View style={styles.settingInfo}>
+              <Ionicons name="alarm-outline" size={20} color={colors.primary} style={styles.settingIcon} />
+              <Text variant="body" color="heading">Remind every</Text>
+            </View>
+            <View style={styles.intervalRow}>
+              {[1, 2, 3, 4].map(h => (
+                <TouchableOpacity
+                  key={h}
+                  onPress={() => setNotificationInterval(h)}
+                  style={[
+                    styles.intervalChip,
+                    {
+                      backgroundColor: notificationInterval === h ? colors.primary : colors.background,
+                      borderColor: notificationInterval === h ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <Text variant="body" style={{ color: notificationInterval === h ? colors.white : colors.textMuted, fontWeight: '600' }}>
+                    {h}h
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text variant="caption" color="muted">
+              {`Notifications at: ${
+                Array.from({ length: Math.min(dailyWords.length || 5, 5) }, (_, i) => {
+                  const [sh, sm] = reminderTime.split(':').map(Number);
+                  const total = sh * 60 + sm + i * notificationInterval * 60;
+                  const hh = Math.floor(total / 60) % 24;
+                  const mm = total % 60;
+                  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+                }).join(', ')
+              }`}
+            </Text>
+          </View>
         </Card>
 
         {/* Account */}
@@ -1278,6 +1318,8 @@ const styles = StyleSheet.create({
   settingInfo: { flexDirection: "row", alignItems: "center" },
   settingIcon: { marginRight: spacing[3] },
   settingValue: { flexDirection: "row", alignItems: "center", gap: spacing[1] },
+  intervalRow: { flexDirection: 'row', gap: spacing[2] },
+  intervalChip: { paddingHorizontal: spacing[4], paddingVertical: spacing[2], borderRadius: borderRadius.full, borderWidth: 1 },
   schedulingContainer: {
     flexDirection: "row",
     alignItems: "center",
