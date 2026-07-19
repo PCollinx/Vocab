@@ -5,11 +5,11 @@
 
 import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { initSentry } from '../src/services/sentry';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 initSentry();
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../src/services/firebase';
@@ -28,6 +28,7 @@ function AppStatusBar() {
 }
 
 export default function RootLayout() {
+  const router = useRouter();
   const { loadUserData, addNotificationToHistory } = useAppStore();
   const cleanupNotifications = useRef<(() => void) | null>(null);
 
@@ -77,6 +78,7 @@ export default function RootLayout() {
                 word: data.word,
                 definition: data.definition ?? '',
               });
+              router.push(`/word/${data.word}`);
             }
           } catch (error) {
             if (__DEV__) console.error('Error handling notification response:', error);
@@ -118,22 +120,22 @@ export default function RootLayout() {
         <ErrorBoundary>
           <AppStatusBar />
           <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        >
-          <Stack.Screen name="auth" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-          <Stack.Screen
-            name="word/[id]"
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
+            screenOptions={{
+              headerShown: false,
+              animation: 'slide_from_right',
             }}
-          />
-        </Stack>
+          >
+            <Stack.Screen name="auth" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+            <Stack.Screen
+              name="word/[id]"
+              options={{
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+              }}
+            />
+          </Stack>
         </ErrorBoundary>
       </ThemeProvider>
     </SafeAreaProvider>

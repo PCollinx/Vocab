@@ -424,7 +424,7 @@ export default function HomeScreen() {
     },
     [
       N,
-      dailyWords,
+      unlearnedDailyWords,
       scrollX,
       isWordBookmarked,
       learnedWords,

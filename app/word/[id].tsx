@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, NativeModules } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
@@ -10,6 +10,8 @@ import { getWord } from '../../src/services';
 import { useAppStore } from '../../src/store/appStore';
 import { Word } from '../../src/types';
 import { CURATED_WORDS } from '../../src/data';
+
+const hasSpeech = !!NativeModules.ExpoSpeech;
 
 export default function WordDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -81,16 +83,26 @@ export default function WordDetailScreen() {
   };
 
   const playAudio = async () => {
-    if (!word?.audioUrl || isPlaying) return;
-    try {
-      if (playerStatus?.isLoaded) {
-        await player.seekTo(0);
-      } else {
-        player.replace(word.audioUrl);
+    if (isPlaying) return;
+    if (word?.audioUrl) {
+      try {
+        if (playerStatus?.isLoaded) {
+          await player.seekTo(0);
+        } else {
+          player.replace(word.audioUrl);
+        }
+        player.play();
+      } catch (error) {
+        if (__DEV__) console.error('Error playing audio:', error);
       }
-      player.play();
-    } catch (error) {
-      if (__DEV__) console.error('Error playing audio:', error);
+    } else if (word && hasSpeech) {
+      try {
+        const S = require('expo-speech');
+        const speaking = await S.isSpeakingAsync();
+        if (!speaking) S.speak(word.word, { language: 'en' });
+      } catch (error) {
+        if (__DEV__) console.error('Error speaking word:', error);
+      }
     }
   };
 
@@ -173,7 +185,7 @@ export default function WordDetailScreen() {
             <Text variant="body" style={{ color: 'rgba(255,255,255,0.8)' }}>
               {word.pronunciation || `/${word.word}/`}
             </Text>
-            {word.audioUrl && (
+            {(word.audioUrl || hasSpeech) && (
               <TouchableOpacity style={styles.speakerBtn} onPress={playAudio} disabled={isPlaying}>
                 <Ionicons
                   name={isPlaying ? 'volume-high' : 'volume-medium'}

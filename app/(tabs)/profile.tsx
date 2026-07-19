@@ -231,18 +231,16 @@ export default function ProfileScreen() {
           allowsEditing: true,
           aspect: [1, 1],
           quality: 0.8,
-          base64: true,
         });
       } else {
         result = await ImagePicker.launchImageLibraryAsync({
           allowsEditing: true,
           aspect: [1, 1],
           quality: 0.8,
-          base64: true,
         });
       }
       if (!result.canceled && result.assets && result.assets[0]) {
-        setUserAvatar(`data:image/jpeg;base64,${result.assets[0].base64}`);
+        setUserAvatar(result.assets[0].uri);
       }
     } catch (error) {
       if (__DEV__) console.error("Error picking image:", error);
