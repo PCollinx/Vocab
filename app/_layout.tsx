@@ -8,8 +8,6 @@ import { Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { initSentry } from '../src/services/sentry';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-
-initSentry();
 import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../src/services/firebase';
@@ -21,6 +19,8 @@ import {
   requestNotificationPermission,
   setupNotificationHandlers,
 } from '../src/services/notificationService';
+
+initSentry();
 
 function AppStatusBar() {
   const isDarkMode = useAppStore((s) => s.isDarkMode);
@@ -99,6 +99,31 @@ export default function RootLayout() {
           }
         }
       );
+
+      // Handle cold-start: app was killed and user tapped a notification to open it.
+      // addNotificationResponseReceivedListener misses this case because the tap
+      // happened before the listener was registered. getLastNotificationResponseAsync
+      // retrieves it. We check notificationHistory to avoid re-navigating on normal
+      // app opens where the old response is still cached by expo-notifications.
+      (async () => {
+        try {
+          const Notifications = require('expo-notifications');
+          const lastResponse = await Notifications.getLastNotificationResponseAsync();
+          if (lastResponse) {
+            const data = lastResponse.notification.request.content.data as Record<string, string>;
+            const id = lastResponse.notification.request.identifier;
+            if (data?.word) {
+              const alreadyHandled = useAppStore.getState().notificationHistory.some(h => h.id === id);
+              if (!alreadyHandled) {
+                addNotificationToHistory({ id, word: data.word, definition: data.definition ?? '' });
+                setTimeout(() => router.push(`/word/${data.word}`), 300);
+              }
+            }
+          }
+        } catch (error) {
+          if (__DEV__) console.error('Error handling cold-start notification:', error);
+        }
+      })();
     } catch (error) {
       if (__DEV__) console.error('Error setting up notifications:', error);
     }

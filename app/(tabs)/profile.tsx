@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import { Container, Text, Card } from "../../src/components";
 import { spacing, borderRadius } from "../../src/constants";
 import { useAppStore } from "../../src/store/appStore";
@@ -240,7 +241,11 @@ export default function ProfileScreen() {
         });
       }
       if (!result.canceled && result.assets && result.assets[0]) {
-        setUserAvatar(result.assets[0].uri);
+        const pickedUri = result.assets[0].uri;
+        const ext = pickedUri.split('.').pop()?.split('?')[0] ?? 'jpg';
+        const destPath = `${FileSystem.documentDirectory}avatar_${Date.now()}.${ext}`;
+        await FileSystem.copyAsync({ from: pickedUri, to: destPath });
+        setUserAvatar(destPath);
       }
     } catch (error) {
       if (__DEV__) console.error("Error picking image:", error);
