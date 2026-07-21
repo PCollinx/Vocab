@@ -18,7 +18,8 @@
       "Bash(ls /Applications/ | grep -i android; which adb 2>/dev/null || echo \"adb not found\"; ls ~/Library/Android/sdk/emulator/emulator 2>/dev/null || echo \"Android SDK not found\")",
       "Read(//Applications/**)",
       "Bash(~/Library/Android/sdk/emulator/emulator -list-avds)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

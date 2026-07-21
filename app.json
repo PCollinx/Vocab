@@ -7,12 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#378ADD"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.wordwise.app",
@@ -20,12 +14,10 @@
     },
     "android": {
       "package": "com.wordwise.app",
-
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#378ADD"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
@@ -51,7 +43,9 @@
           "organization": "collins-sb",
           "project": "wordwise"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-asset"
     ],
     "extra": {
       "privacyPolicyUrl": "https://pcollinx.github.io/wordwise-privacy/",
