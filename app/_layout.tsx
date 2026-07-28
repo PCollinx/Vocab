@@ -78,7 +78,7 @@ export default function RootLayout() {
                 word: data.word,
                 definition: data.definition ?? '',
               });
-              router.push(`/word/${data.word}`);
+              router.replace('/(tabs)/');
             }
           } catch (error) {
             if (__DEV__) console.error('Error handling notification response:', error);
@@ -116,7 +116,7 @@ export default function RootLayout() {
               const alreadyHandled = useAppStore.getState().notificationHistory.some(h => h.id === id);
               if (!alreadyHandled) {
                 addNotificationToHistory({ id, word: data.word, definition: data.definition ?? '' });
-                setTimeout(() => router.push(`/word/${data.word}`), 300);
+                setTimeout(() => router.replace('/(tabs)/'), 300);
               }
             }
           }
@@ -153,13 +153,7 @@ export default function RootLayout() {
             <Stack.Screen name="auth" options={{ gestureEnabled: false }} />
             <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-            <Stack.Screen
-              name="word/[id]"
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
-              }}
-            />
+
           </Stack>
         </ErrorBoundary>
       </ThemeProvider>

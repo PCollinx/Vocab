@@ -48,7 +48,7 @@ interface CarouselItemProps {
   scrollX: Animated.Value;
   isBookmarked: boolean;
   isLearned: boolean;
-  onNavigate: () => void;
+  onMarkLearned: () => void;
   onBookmark: () => void;
   onHeightChange?: (height: number) => void;
 }
@@ -60,7 +60,7 @@ const CarouselCard = React.memo(
     scrollX,
     isBookmarked,
     isLearned,
-    onNavigate,
+    onMarkLearned,
     onBookmark,
     onHeightChange,
   }: CarouselItemProps) => {
@@ -196,7 +196,6 @@ const CarouselCard = React.memo(
                 variant="body"
                 color="muted"
                 style={styles.definition}
-                numberOfLines={4}
               >
                 "{item.definition}"
               </Text>
@@ -222,12 +221,57 @@ const CarouselCard = React.memo(
                   variant="bodySmall"
                   color="muted"
                   style={styles.example}
-                  numberOfLines={2}
                 >
                   "{item.example}"
                 </Text>
               </View>
             )}
+
+            {item.synonyms && item.synonyms.length > 0 && (
+              <View style={styles.meaningSection}>
+                <View style={styles.sectionLabelRow}>
+                  <Ionicons name="swap-horizontal" size={16} color={colors.correct} />
+                  <Text variant="label" color="heading" style={styles.sectionLabel}>
+                    Synonyms
+                  </Text>
+                </View>
+                <View style={styles.tagContainer}>
+                  {item.synonyms.slice(0, 6).map((synonym) => (
+                    <Badge key={synonym} label={synonym} variant="correct" />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {item.antonyms && item.antonyms.length > 0 && (
+              <View style={styles.meaningSection}>
+                <View style={styles.sectionLabelRow}>
+                  <Ionicons name="code" size={16} color={colors.accent} />
+                  <Text variant="label" color="heading" style={styles.sectionLabel}>
+                    Antonyms
+                  </Text>
+                </View>
+                <View style={styles.tagContainer}>
+                  {item.antonyms.slice(0, 6).map((antonym) => (
+                    <Badge key={antonym} label={antonym} variant="accent" />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <Text variant="caption" color="muted">Difficulty</Text>
+                <Badge
+                  label={item.difficulty}
+                  variant={item.difficulty === 'easy' ? 'correct' : item.difficulty === 'hard' ? 'accent' : 'primary'}
+                />
+              </View>
+              <View style={styles.metaItem}>
+                <Text variant="caption" color="muted">Category</Text>
+                <Badge label={item.category} variant="muted" />
+              </View>
+            </View>
 
             <View style={styles.cardActions}>
               <TouchableOpacity
@@ -237,9 +281,11 @@ const CarouselCard = React.memo(
                     backgroundColor: isLearned
                       ? colors.correct
                       : colors.primary,
+                    opacity: isLearned ? 0.75 : 1,
                   },
                 ]}
-                onPress={onNavigate}
+                onPress={onMarkLearned}
+                disabled={isLearned}
               >
                 <Ionicons
                   name={
@@ -249,7 +295,7 @@ const CarouselCard = React.memo(
                   color={colors.white}
                 />
                 <Text variant="button" style={{ color: colors.white }}>
-                  {isLearned ? "Learned" : "See Details"}
+                  {isLearned ? "Learned ✓" : "Mark as Learned"}
                 </Text>
               </TouchableOpacity>
 
@@ -290,6 +336,7 @@ export default function HomeScreen() {
     refreshDailyWords,
     setCurrentWordIndex,
     learnedWords,
+    markWordLearned,
   } = useAppStore();
 
   const todayKey = new Date().toISOString().split('T')[0];
@@ -320,9 +367,9 @@ export default function HomeScreen() {
     fetchDailyWords();
   }, []);
 
-  // Auto-fetch more words when all or nearly all are learned
+  // Only auto-fetch when the carousel is completely empty — never interrupt visible cards.
   useEffect(() => {
-    if (unlearnedDailyWords.length < 2 && !isLoadingDailyWords && dailyWords.length > 0) {
+    if (unlearnedDailyWords.length === 0 && !isLoadingDailyWords && dailyWords.length > 0) {
       refreshDailyWords();
     }
   }, [unlearnedDailyWords.length]);
@@ -399,6 +446,43 @@ export default function HomeScreen() {
     [],
   );
 
+  // Animate to the next card exactly like a swipe, then mark as learned.
+  // After the word is removed from unlearnedDailyWords the N-change effect
+  // re-centers the looped list with animated:false. We pre-compute what the
+  // correct currentWordIndex will be in the shorter array so that re-center
+  // snaps to the same word we just scrolled to — making the snap invisible.
+  const handleMarkLearned = useCallback(
+    (word: Word) => {
+      if (N === 0) return;
+      if (N === 1) {
+        // Only one card left — just mark it; the "all caught up" screen appears.
+        markWordLearned(word.word);
+        return;
+      }
+
+      const r = localActiveIndex;
+      const nextFlatListIndex = flatListIndex.current + 1;
+      const nextRealIdx = ((nextFlatListIndex % N) + N) % N;
+
+      // Scroll to the next card with the same animated swipe.
+      flatListRef.current?.scrollToIndex({ index: nextFlatListIndex, animated: true });
+      flatListIndex.current = nextFlatListIndex;
+      setLocalActiveIndex(nextRealIdx);
+      // Keep prevStoreIndex in sync so the store-driven scroll effect skips.
+      prevStoreIndex.current = nextRealIdx;
+
+      setTimeout(() => {
+        // After word at index r is removed the next word shifts from r+1 → r,
+        // or wraps to 0 when we were at the last position.
+        const newCurrentWordIndex = r < N - 1 ? r : 0;
+        prevStoreIndex.current = newCurrentWordIndex;
+        setCurrentWordIndex(newCurrentWordIndex);
+        markWordLearned(word.word);
+      }, 350);
+    },
+    [N, localActiveIndex, markWordLearned, setCurrentWordIndex],
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: Word; index: number }) => {
       const realIndex = index % N;
@@ -412,7 +496,7 @@ export default function HomeScreen() {
           isLearned={learnedWords.some(
             (w) => w.wordId.toLowerCase() === word.word.toLowerCase(),
           )}
-          onNavigate={() => router.push(`/word/${word.id}`)}
+          onMarkLearned={() => handleMarkLearned(word)}
           onBookmark={() => toggleBookmark(word)}
           onHeightChange={(h) =>
             setCardHeights((prev) =>
@@ -428,7 +512,7 @@ export default function HomeScreen() {
       scrollX,
       isWordBookmarked,
       learnedWords,
-      router,
+      handleMarkLearned,
       toggleBookmark,
     ],
   );
@@ -532,7 +616,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Word Carousel */}
-        {isLoadingDailyWords ? (
+        {isLoadingDailyWords && N === 0 ? (
           <Card style={styles.singleCard}>
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -997,6 +1081,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
   },
   sectionLabel: {},
+  tagContainer: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  metaRow: { flexDirection: "row", gap: spacing[4], marginTop: spacing[3] },
+  metaItem: { gap: spacing[1] },
   definition: { fontStyle: "italic", textAlign: "center" },
   example: { fontStyle: "italic", textAlign: "center" },
   cardActions: {
