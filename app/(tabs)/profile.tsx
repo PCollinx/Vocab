@@ -17,21 +17,77 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import { Container, Text, Card } from "../../src/components";
+import { Text } from "../../src/components";
 import { spacing, borderRadius } from "../../src/constants";
 import { useAppStore } from "../../src/store/appStore";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { auth } from "../../src/services/firebase";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   scheduleWordReminders,
   cancelAllNotifications,
 } from "../../src/services/notificationService";
+import type { Colors } from "../../src/constants/colors";
+
+const HEADER_BG = "#185FA5";
+
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
+
+function MenuRow({
+  icon,
+  label,
+  value,
+  onPress,
+  iconBg,
+  colors,
+  last,
+}: {
+  icon: IconName;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  iconBg: string;
+  colors: Colors;
+  last?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.menuRow,
+        !last && {
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.border,
+        },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.menuLeft}>
+        <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
+          <Ionicons name={icon} size={18} color={colors.textMuted} />
+        </View>
+        <Text style={[styles.menuLabel, { color: colors.textHeading }]}>
+          {label}
+        </Text>
+      </View>
+      <View style={styles.menuRight}>
+        {value ? (
+          <Text style={[styles.menuValue, { color: colors.textMuted }]}>
+            {value}
+          </Text>
+        ) : null}
+        <Ionicons name="chevron-forward" size={15} color={colors.textHint} />
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     userName,
     userAge,
@@ -68,7 +124,6 @@ export default function ProfileScreen() {
   const [isSchedulingNotifications, setIsSchedulingNotifications] =
     useState(false);
 
-  // Edit Profile state
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
@@ -81,12 +136,15 @@ export default function ProfileScreen() {
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState(false);
 
-  // Delete Account state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [showDeletePw, setShowDeletePw] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-  const isGoogleUser = auth.currentUser?.providerData[0]?.providerId === 'google.com';
+  const isGoogleUser =
+    auth.currentUser?.providerData[0]?.providerId === "google.com";
+
+  const iconBg = isDark ? colors.surfaceElevated : "#EDEEF2";
+  const dangerIconBg = isDark ? colors.wrongLight : "#FEF0EE";
 
   const openEditProfile = () => {
     setEditName(userName ?? "");
@@ -151,9 +209,13 @@ export default function ProfileScreen() {
 
   const handleDeleteAccount = async () => {
     setDeleteError("");
-    if (!isGoogleUser && !deletePassword) return setDeleteError("Enter your password to confirm.");
-    const result = await deleteAccount(isGoogleUser ? undefined : deletePassword);
-    if (!result.success) return setDeleteError(result.error ?? "Deletion failed.");
+    if (!isGoogleUser && !deletePassword)
+      return setDeleteError("Enter your password to confirm.");
+    const result = await deleteAccount(
+      isGoogleUser ? undefined : deletePassword,
+    );
+    if (!result.success)
+      return setDeleteError(result.error ?? "Deletion failed.");
     setShowDeleteModal(false);
     router.replace("/auth");
   };
@@ -161,28 +223,28 @@ export default function ProfileScreen() {
   const achievements = [
     {
       id: "1",
-      icon: "star" as const,
+      icon: "star" as IconName,
       name: "First Word",
       unlocked: true,
       color: colors.streak,
     },
     {
       id: "2",
-      icon: "flame" as const,
-      name: "7 Day Streak",
+      icon: "flame" as IconName,
+      name: "7-Day Streak",
       unlocked: currentStreak >= 7,
       color: colors.accent,
     },
     {
       id: "3",
-      icon: "book" as const,
+      icon: "book" as IconName,
       name: "50 Words",
       unlocked: totalWordsLearned >= 50,
       color: colors.primary,
     },
     {
       id: "4",
-      icon: "trophy" as const,
+      icon: "trophy" as IconName,
       name: "100 Words",
       unlocked: totalWordsLearned >= 100,
       color: colors.correct,
@@ -200,10 +262,14 @@ export default function ProfileScreen() {
   }, []);
 
   const scheduleNotifications = async () => {
-    if (dailyWords.length === 0) return; // Words not loaded yet — don't cancel existing notifications
+    if (dailyWords.length === 0) return;
     try {
       setIsSchedulingNotifications(true);
-      await scheduleWordReminders(dailyWords, reminderTime, notificationInterval);
+      await scheduleWordReminders(
+        dailyWords,
+        reminderTime,
+        notificationInterval,
+      );
     } catch (error) {
       if (__DEV__) console.error("Error scheduling notifications:", error);
     } finally {
@@ -217,7 +283,13 @@ export default function ProfileScreen() {
     } else {
       cancelAllNotifications();
     }
-  }, [dailyGoal, reminderTime, reminderEnabled, notificationInterval, dailyWords.length]);
+  }, [
+    dailyGoal,
+    reminderTime,
+    reminderEnabled,
+    notificationInterval,
+    dailyWords.length,
+  ]);
 
   const handlePickImage = async (useCamera: boolean) => {
     try {
@@ -242,7 +314,7 @@ export default function ProfileScreen() {
       }
       if (!result.canceled && result.assets && result.assets[0]) {
         const pickedUri = result.assets[0].uri;
-        const ext = pickedUri.split('.').pop()?.split('?')[0] ?? 'jpg';
+        const ext = pickedUri.split(".").pop()?.split("?")[0] ?? "jpg";
         const destPath = `${FileSystem.documentDirectory}avatar_${Date.now()}.${ext}`;
         await FileSystem.copyAsync({ from: pickedUri, to: destPath });
         setUserAvatar(destPath);
@@ -267,17 +339,30 @@ export default function ProfileScreen() {
   const hourOptions = Array.from({ length: 24 }, (_, i) => i);
   const minuteOptions = [0, 15, 30, 45];
 
+  const notificationPreview = Array.from(
+    { length: Math.min(dailyWords.length || 5, 5) },
+    (_, i) => {
+      const [sh, sm] = reminderTime.split(":").map(Number);
+      const total = sh * 60 + sm + i * notificationInterval * 60;
+      const hh = Math.floor(total / 60) % 24;
+      const mm = total % 60;
+      return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+    },
+  ).join(", ");
+
   return (
-    <Container>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView
-        style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ paddingBottom: 20 }}
       >
-        {/* Profile Card */}
-        <Card style={styles.profileCard}>
+        {/* ── HEADER ── */}
+        <View
+          style={[styles.header, { paddingTop: insets.top + spacing[5] }]}
+        >
           <TouchableOpacity
-            style={styles.avatarContainer}
+            style={styles.avatarWrapper}
+            activeOpacity={0.8}
             onPress={() => {
               Alert.alert(
                 "Choose avatar source",
@@ -295,357 +380,358 @@ export default function ProfileScreen() {
             }}
           >
             {userAvatar ? (
-              <Image source={{ uri: userAvatar }} style={styles.avatarImage} />
+              <Image source={{ uri: userAvatar }} style={styles.avatar} />
             ) : (
-              <View
-                style={[
-                  styles.avatarLarge,
-                  { backgroundColor: colors.primaryLight },
-                ]}
-              >
+              <View style={styles.avatarFallback}>
                 {userName ? (
-                  <Text style={{ fontSize: 32, color: colors.primary }}>
-                    {userName.charAt(0)}
+                  <Text style={styles.avatarInitial}>
+                    {userName.charAt(0).toUpperCase()}
                   </Text>
                 ) : (
-                  <Ionicons name="person" size={36} color={colors.primary} />
+                  <Ionicons name="person" size={42} color="#fff" />
                 )}
               </View>
             )}
-            <View
-              style={[
-                styles.cameraIconBadge,
-                {
-                  backgroundColor: colors.primary,
-                  borderColor: colors.surface,
-                },
-              ]}
-            >
-              <Ionicons name="camera" size={12} color={colors.white} />
+            <View style={styles.cameraBadge}>
+              <Ionicons name="camera" size={12} color="#fff" />
             </View>
           </TouchableOpacity>
-          <Text variant="h3" color="heading" style={styles.userName}>
-            {userName || "Learner"}
-          </Text>
-          <Text variant="body" color="muted">
-            {userBio}
-          </Text>
 
-          <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
+          <Text style={styles.headerName}>{userName || "Learner"}</Text>
+          {userBio || auth.currentUser?.email ? (
+            <Text style={styles.headerSub}>
+              {userBio || auth.currentUser?.email}
+            </Text>
+          ) : null}
+
+          <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text variant="h4" color="primary">
-                {totalWordsLearned}
-              </Text>
-              <Text variant="caption" color="muted">
-                Words
-              </Text>
+              <Text style={styles.statNum}>{totalWordsLearned}</Text>
+              <Text style={styles.statLabel}>Words</Text>
             </View>
-            <View
-              style={[styles.statDivider, { backgroundColor: colors.border }]}
-            />
+            <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text variant="h4" color="primary">
-                {currentStreak}
-              </Text>
-              <Text variant="caption" color="muted">
-                Streak
-              </Text>
+              <Text style={styles.statNum}>{currentStreak}</Text>
+              <Text style={styles.statLabel}>Streak</Text>
             </View>
-            <View
-              style={[styles.statDivider, { backgroundColor: colors.border }]}
-            />
+            <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text variant="h4" color="primary">
+              <Text style={styles.statNum}>
                 {Math.floor(totalWordsLearned * 0.85)}
               </Text>
-              <Text variant="caption" color="muted">
-                Mastered
-              </Text>
+              <Text style={styles.statLabel}>Mastered</Text>
             </View>
           </View>
-        </Card>
-
-        {/* Achievements */}
-        <Text variant="h4" color="heading" style={styles.sectionTitle}>
-          Achievements
-        </Text>
-        <View style={styles.achievementsGrid}>
-          {achievements.map((achievement) => (
-            <View
-              key={achievement.id}
-              style={[
-                styles.achievementCard,
-                { backgroundColor: colors.surface },
-                !achievement.unlocked && styles.achievementLocked,
-              ]}
-            >
-              <Ionicons
-                name={achievement.icon}
-                size={24}
-                color={
-                  achievement.unlocked ? achievement.color : colors.textMuted
-                }
-              />
-              <Text
-                variant="caption"
-                color={achievement.unlocked ? "heading" : "muted"}
-                style={styles.achievementName}
-              >
-                {achievement.name}
-              </Text>
-            </View>
-          ))}
         </View>
 
-        {/* Settings */}
-        <Text variant="h4" color="heading" style={styles.sectionTitle}>
-          Settings
-        </Text>
-        <Card>
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Ionicons
-                name="notifications"
-                size={20}
-                color={colors.primary}
-                style={styles.settingIcon}
-              />
-              <Text variant="body" color="heading">
-                Daily Reminders
-              </Text>
-            </View>
-            <Switch
-              value={reminderEnabled}
-              onValueChange={setReminderEnabled}
-              trackColor={{ false: colors.border, true: colors.primaryLight }}
-              thumbColor={reminderEnabled ? colors.primary : colors.textMuted}
-            />
-          </View>
-
-          <View
-            style={[
-              styles.settingItem,
-              { borderTopWidth: 1, borderTopColor: colors.border },
-            ]}
-          >
-            <View style={styles.settingInfo}>
-              <Ionicons
-                name="moon"
-                size={20}
-                color={colors.primary}
-                style={styles.settingIcon}
-              />
-              <Text variant="body" color="heading">
-                Dark Mode
-              </Text>
-            </View>
-            <Switch
-              value={isDarkMode}
-              onValueChange={toggleDarkMode}
-              trackColor={{ false: colors.border, true: colors.primaryLight }}
-              thumbColor={isDarkMode ? colors.primary : colors.textMuted}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              { borderTopWidth: 1, borderTopColor: colors.border },
-            ]}
-            onPress={() => setShowDailyGoalModal(true)}
-          >
-            <View style={styles.settingInfo}>
-              <Ionicons
-                name="flag"
-                size={20}
-                color={colors.primary}
-                style={styles.settingIcon}
-              />
-              <Text variant="body" color="heading">
-                Daily Goal
-              </Text>
-            </View>
-            <View style={styles.settingValue}>
-              <Text variant="body" color="muted">
-                {dailyGoal} words
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={colors.textMuted}
-              />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              { borderTopWidth: 1, borderTopColor: colors.border },
-            ]}
-            onPress={() => setShowReminderTimeModal(true)}
-          >
-            <View style={styles.settingInfo}>
-              <Ionicons
-                name="time"
-                size={20}
-                color={colors.primary}
-                style={styles.settingIcon}
-              />
-              <Text variant="body" color="heading">
-                First Reminder
-              </Text>
-            </View>
-            <View style={styles.settingValue}>
-              <Text variant="body" color="muted">
-                {reminderTime}
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={colors.textMuted}
-              />
-            </View>
-          </TouchableOpacity>
-
-          <View style={[styles.settingItem, { borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'column', alignItems: 'flex-start', gap: spacing[3] }]}>
-            <View style={styles.settingInfo}>
-              <Ionicons name="alarm-outline" size={20} color={colors.primary} style={styles.settingIcon} />
-              <Text variant="body" color="heading">Remind every</Text>
-            </View>
-            <View style={styles.intervalRow}>
-              {[1, 2, 3, 4].map(h => (
-                <TouchableOpacity
-                  key={h}
-                  onPress={() => setNotificationInterval(h)}
+        {/* ── BODY ── */}
+        <View style={styles.body}>
+          {/* Achievements */}
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+            ACHIEVEMENTS
+          </Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            {achievements.map((a, idx) => (
+              <View
+                key={a.id}
+                style={[
+                  styles.achievementRow,
+                  idx < achievements.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
+                  },
+                  !a.unlocked && { opacity: 0.4 },
+                ]}
+              >
+                <View
                   style={[
-                    styles.intervalChip,
+                    styles.iconCircle,
+                    { backgroundColor: iconBg },
+                  ]}
+                >
+                  <Ionicons
+                    name={a.icon}
+                    size={18}
+                    color={a.unlocked ? a.color : colors.textHint}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.menuLabel,
                     {
-                      backgroundColor: notificationInterval === h ? colors.primary : colors.background,
-                      borderColor: notificationInterval === h ? colors.primary : colors.border,
+                      color: a.unlocked
+                        ? colors.textHeading
+                        : colors.textMuted,
                     },
                   ]}
                 >
-                  <Text variant="body" style={{ color: notificationInterval === h ? colors.white : colors.textMuted, fontWeight: '600' }}>
-                    {h}h
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text variant="caption" color="muted">
-              {`Notifications at: ${
-                Array.from({ length: Math.min(dailyWords.length || 5, 5) }, (_, i) => {
-                  const [sh, sm] = reminderTime.split(':').map(Number);
-                  const total = sh * 60 + sm + i * notificationInterval * 60;
-                  const hh = Math.floor(total / 60) % 24;
-                  const mm = total % 60;
-                  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-                }).join(', ')
-              }`}
-            </Text>
+                  {a.name}
+                </Text>
+                {a.unlocked && (
+                  <View style={styles.unlockedBadge}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color={colors.correct}
+                    />
+                  </View>
+                )}
+              </View>
+            ))}
           </View>
-        </Card>
 
-        {/* Account */}
-        <Text variant="h4" color="heading" style={styles.sectionTitle}>
-          Account
-        </Text>
-        <Card>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={openEditProfile}
-          >
-            <View style={styles.settingInfo}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={colors.primary}
-                style={styles.settingIcon}
-              />
-              <Text variant="body" color="heading">
-                Edit Profile
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={colors.textMuted}
+          {/* Learning */}
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+            LEARNING
+          </Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <MenuRow
+              icon="flag-outline"
+              label="Daily Goal"
+              value={`${dailyGoal} words`}
+              onPress={() => setShowDailyGoalModal(true)}
+              iconBg={iconBg}
+              colors={colors}
             />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              { borderTopWidth: 1, borderTopColor: colors.border },
-            ]}
-            onPress={resetOnboarding}
-          >
-            <View style={styles.settingInfo}>
-              <Ionicons
-                name="refresh"
-                size={20}
-                color={colors.accent}
-                style={styles.settingIcon}
-              />
-              <Text variant="body" color="accent">
-                Reset Onboarding
+            <MenuRow
+              icon="time-outline"
+              label="First Reminder"
+              value={reminderTime}
+              onPress={() => setShowReminderTimeModal(true)}
+              iconBg={iconBg}
+              colors={colors}
+            />
+            <View
+              style={[
+                styles.menuRow,
+                {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: colors.border,
+                },
+              ]}
+            >
+              <View style={styles.menuLeft}>
+                <View
+                  style={[styles.iconCircle, { backgroundColor: iconBg }]}
+                >
+                  <Ionicons
+                    name="alarm-outline"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </View>
+                <Text
+                  style={[styles.menuLabel, { color: colors.textHeading }]}
+                >
+                  Remind every
+                </Text>
+              </View>
+              <View style={styles.chipRow}>
+                {[1, 2, 3, 4].map((h) => (
+                  <TouchableOpacity
+                    key={h}
+                    onPress={() => setNotificationInterval(h)}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor:
+                          notificationInterval === h
+                            ? colors.primary
+                            : iconBg,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "600",
+                        color:
+                          notificationInterval === h
+                            ? "#fff"
+                            : colors.textMuted,
+                      }}
+                    >
+                      {h}h
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={styles.noticeRow}>
+              <Text style={[styles.noticeText, { color: colors.textMuted }]}>
+                Scheduled at: {notificationPreview}
               </Text>
             </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              { borderTopWidth: 1, borderTopColor: colors.border },
-            ]}
-            onPress={handleLogout}
-          >
-            <View style={styles.settingInfo}>
-              <Ionicons
-                name="log-out-outline"
-                size={20}
-                color={colors.wrong}
-                style={styles.settingIcon}
-              />
-              <Text variant="body" color="wrong">
-                Log Out
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              { borderTopWidth: 1, borderTopColor: colors.border },
-            ]}
-            onPress={openDeleteModal}
-          >
-            <View style={styles.settingInfo}>
-              <Ionicons
-                name="trash-outline"
-                size={20}
-                color={colors.wrong}
-                style={styles.settingIcon}
-              />
-              <Text variant="body" color="wrong">
-                Delete Account
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </Card>
-
-        {isSchedulingNotifications && (
-          <View style={styles.schedulingContainer}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text variant="caption" color="muted" style={styles.schedulingText}>
-              Scheduling notifications...
-            </Text>
           </View>
-        )}
 
-        <View style={styles.bottomSpacer} />
+          {/* Notifications */}
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+            NOTIFICATIONS
+          </Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <View style={[styles.menuRow, styles.menuRowLast]}>
+              <View style={styles.menuLeft}>
+                <View
+                  style={[styles.iconCircle, { backgroundColor: iconBg }]}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </View>
+                <Text
+                  style={[styles.menuLabel, { color: colors.textHeading }]}
+                >
+                  Daily Reminders
+                </Text>
+              </View>
+              <Switch
+                value={reminderEnabled}
+                onValueChange={setReminderEnabled}
+                trackColor={{
+                  false: colors.border,
+                  true: colors.primaryLight,
+                }}
+                thumbColor={
+                  reminderEnabled ? colors.primary : colors.textMuted
+                }
+              />
+            </View>
+          </View>
+
+          {/* Appearance */}
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+            APPEARANCE
+          </Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <View style={[styles.menuRow, styles.menuRowLast]}>
+              <View style={styles.menuLeft}>
+                <View
+                  style={[styles.iconCircle, { backgroundColor: iconBg }]}
+                >
+                  <Ionicons
+                    name="moon-outline"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </View>
+                <Text
+                  style={[styles.menuLabel, { color: colors.textHeading }]}
+                >
+                  Dark Mode
+                </Text>
+              </View>
+              <Switch
+                value={isDarkMode}
+                onValueChange={toggleDarkMode}
+                trackColor={{
+                  false: colors.border,
+                  true: colors.primaryLight,
+                }}
+                thumbColor={isDarkMode ? colors.primary : colors.textMuted}
+              />
+            </View>
+          </View>
+
+          {/* Account */}
+          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+            ACCOUNT
+          </Text>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <MenuRow
+              icon="person-outline"
+              label="Edit Profile"
+              onPress={openEditProfile}
+              iconBg={iconBg}
+              colors={colors}
+            />
+            <MenuRow
+              icon="refresh-outline"
+              label="Reset Onboarding"
+              onPress={resetOnboarding}
+              iconBg={iconBg}
+              colors={colors}
+            />
+            <TouchableOpacity
+              style={[
+                styles.menuRow,
+                {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: colors.border,
+                },
+              ]}
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <View
+                  style={[styles.iconCircle, { backgroundColor: iconBg }]}
+                >
+                  <Ionicons
+                    name="log-out-outline"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </View>
+                <Text style={[styles.menuLabel, { color: colors.textHeading }]}>
+                  Log Out
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={15}
+                color={colors.textHint}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuRow, styles.menuRowLast]}
+              onPress={openDeleteModal}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <View
+                  style={[
+                    styles.iconCircle,
+                    { backgroundColor: dangerIconBg },
+                  ]}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={18}
+                    color={colors.wrong}
+                  />
+                </View>
+                <Text style={[styles.menuLabel, { color: colors.wrong }]}>
+                  Delete Account
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={15}
+                color={colors.wrong}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {isSchedulingNotifications && (
+            <View style={styles.schedulingRow}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: colors.textMuted,
+                  marginLeft: spacing[2],
+                }}
+              >
+                Scheduling notifications...
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
-      {/* Edit Profile Modal */}
+      {/* ── EDIT PROFILE MODAL ── */}
       <Modal
         visible={showEditProfile}
         animationType="slide"
@@ -657,10 +743,7 @@ export default function ProfileScreen() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <View
-            style={[
-              styles.modalSheetContent,
-              { backgroundColor: colors.surface },
-            ]}
+            style={[styles.modalSheet, { backgroundColor: colors.surface }]}
           >
             <View style={styles.modalHeader}>
               <Text variant="h4" color="heading">
@@ -841,7 +924,11 @@ export default function ProfileScreen() {
 
               {!!editNewPassword && (
                 <>
-                  <Text variant="label" color="muted" style={styles.editLabel}>
+                  <Text
+                    variant="label"
+                    color="muted"
+                    style={styles.editLabel}
+                  >
                     Confirm New Password
                   </Text>
                   <View
@@ -876,7 +963,10 @@ export default function ProfileScreen() {
               )}
 
               <View
-                style={[styles.editDivider, { backgroundColor: colors.border }]}
+                style={[
+                  styles.editDivider,
+                  { backgroundColor: colors.border },
+                ]}
               />
 
               <Text variant="label" color="muted" style={styles.editLabel}>
@@ -937,7 +1027,7 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Delete Account Modal */}
+      {/* ── DELETE ACCOUNT MODAL ── */}
       <Modal
         visible={showDeleteModal}
         animationType="slide"
@@ -949,10 +1039,7 @@ export default function ProfileScreen() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <View
-            style={[
-              styles.modalSheetContent,
-              { backgroundColor: colors.surface },
-            ]}
+            style={[styles.modalSheet, { backgroundColor: colors.surface }]}
           >
             <View style={styles.modalHeader}>
               <Text variant="h4" color="heading">
@@ -964,34 +1051,14 @@ export default function ProfileScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-            <View
-              style={[
-                styles.feedbackBox,
-                { backgroundColor: colors.wrongLight },
-              ]}
-            >
-              <Ionicons
-                name="warning-outline"
-                size={15}
-                color={colors.wrong}
-              />
-              <Text
-                variant="bodySmall"
-                style={{ color: colors.wrong, flex: 1 }}
-              >
-                This will permanently delete your account and all data including bookmarks, progress, and quiz history. This cannot be undone.
-              </Text>
-            </View>
-
-            {!!deleteError && (
               <View
                 style={[
                   styles.feedbackBox,
-                  { backgroundColor: colors.wrongLight, marginTop: spacing[2] },
+                  { backgroundColor: colors.wrongLight },
                 ]}
               >
                 <Ionicons
-                  name="alert-circle-outline"
+                  name="warning-outline"
                   size={15}
                   color={colors.wrong}
                 />
@@ -999,79 +1066,115 @@ export default function ProfileScreen() {
                   variant="bodySmall"
                   style={{ color: colors.wrong, flex: 1 }}
                 >
-                  {deleteError}
+                  This will permanently delete your account and all data
+                  including bookmarks, progress, and quiz history. This cannot
+                  be undone.
                 </Text>
               </View>
-            )}
 
-            {isGoogleUser ? (
-              <Text variant="bodySmall" color="muted" style={{ marginBottom: spacing[4] }}>
-                You'll be asked to sign in with Google to confirm your identity before deletion.
-              </Text>
-            ) : (
-              <>
-                <Text variant="label" color="muted" style={styles.editLabel}>
-                  Enter your password to confirm
-                </Text>
+              {!!deleteError && (
                 <View
                   style={[
-                    styles.editInputRow,
+                    styles.feedbackBox,
                     {
-                      backgroundColor: colors.background,
-                      borderColor: colors.border,
+                      backgroundColor: colors.wrongLight,
+                      marginTop: spacing[2],
                     },
                   ]}
                 >
                   <Ionicons
-                    name="key-outline"
-                    size={17}
-                    color={colors.textMuted}
-                    style={styles.editInputIcon}
+                    name="alert-circle-outline"
+                    size={15}
+                    color={colors.wrong}
                   />
-                  <TextInput
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: colors.wrong, flex: 1 }}
+                  >
+                    {deleteError}
+                  </Text>
+                </View>
+              )}
+
+              {isGoogleUser ? (
+                <Text
+                  variant="bodySmall"
+                  color="muted"
+                  style={{ marginBottom: spacing[4] }}
+                >
+                  You'll be asked to sign in with Google to confirm your
+                  identity before deletion.
+                </Text>
+              ) : (
+                <>
+                  <Text
+                    variant="label"
+                    color="muted"
+                    style={styles.editLabel}
+                  >
+                    Enter your password to confirm
+                  </Text>
+                  <View
                     style={[
-                      styles.editInput,
-                      styles.editInputFlex,
-                      { color: colors.textHeading },
+                      styles.editInputRow,
+                      {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                      },
                     ]}
-                    value={deletePassword}
-                    onChangeText={setDeletePassword}
-                    placeholder="Current password"
-                    placeholderTextColor={colors.textMuted}
-                    secureTextEntry={!showDeletePw}
-                    autoCapitalize="none"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowDeletePw(!showDeletePw)}
-                    style={styles.eyeBtn}
                   >
                     <Ionicons
-                      name={showDeletePw ? "eye-off-outline" : "eye-outline"}
+                      name="key-outline"
                       size={17}
                       color={colors.textMuted}
+                      style={styles.editInputIcon}
                     />
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
+                    <TextInput
+                      style={[
+                        styles.editInput,
+                        styles.editInputFlex,
+                        { color: colors.textHeading },
+                      ]}
+                      value={deletePassword}
+                      onChangeText={setDeletePassword}
+                      placeholder="Current password"
+                      placeholderTextColor={colors.textMuted}
+                      secureTextEntry={!showDeletePw}
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowDeletePw(!showDeletePw)}
+                      style={styles.eyeBtn}
+                    >
+                      <Ionicons
+                        name={
+                          showDeletePw ? "eye-off-outline" : "eye-outline"
+                        }
+                        size={17}
+                        color={colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
 
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                { backgroundColor: colors.wrong },
-              ]}
-              onPress={handleDeleteAccount}
-            >
-              <Text variant="button" color="white">
-                Delete My Account
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: colors.wrong },
+                ]}
+                onPress={handleDeleteAccount}
+              >
+                <Text variant="button" color="white">
+                  Delete My Account
+                </Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Daily Goal Modal */}
+      {/* ── DAILY GOAL MODAL ── */}
       <Modal
         visible={showDailyGoalModal}
         animationType="slide"
@@ -1080,10 +1183,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View
-            style={[
-              styles.modalSheetContent,
-              { backgroundColor: colors.surface },
-            ]}
+            style={[styles.modalSheet, { backgroundColor: colors.surface }]}
           >
             <View style={styles.modalHeader}>
               <Text variant="h4" color="heading">
@@ -1106,7 +1206,9 @@ export default function ProfileScreen() {
                     styles.goalButton,
                     {
                       backgroundColor:
-                        dailyGoal === goal ? colors.primary : colors.background,
+                        dailyGoal === goal
+                          ? colors.primary
+                          : colors.background,
                       borderColor:
                         dailyGoal === goal ? colors.primary : colors.border,
                     },
@@ -1129,7 +1231,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      {/* Reminder Time Modal */}
+      {/* ── REMINDER TIME MODAL ── */}
       <Modal
         visible={showReminderTimeModal}
         animationType="slide"
@@ -1138,10 +1240,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View
-            style={[
-              styles.modalSheetContent,
-              { backgroundColor: colors.surface },
-            ]}
+            style={[styles.modalSheet, { backgroundColor: colors.surface }]}
           >
             <View style={styles.modalHeader}>
               <Text variant="h4" color="heading">
@@ -1237,7 +1336,10 @@ export default function ProfileScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: colors.primary },
+              ]}
               onPress={handleReminderTimeChange}
             >
               <Text variant="button" color="white">
@@ -1247,99 +1349,176 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </Container>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 50 },
-  profileCard: {
+  screen: { flex: 1 },
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+  header: {
+    backgroundColor: HEADER_BG,
     alignItems: "center",
-    paddingVertical: spacing[6],
-    marginBottom: spacing[6],
+    paddingHorizontal: spacing[6],
+    paddingBottom: spacing[8],
   },
-  avatarContainer: { position: "relative", marginBottom: spacing[3] },
-  avatarLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatarWrapper: { position: "relative", marginBottom: spacing[4] },
+  avatar: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.25)",
+  },
+  avatarFallback: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "rgba(255,255,255,0.12)",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.18)",
   },
-  avatarImage: { width: 80, height: 80, borderRadius: 40 },
-  cameraIconBadge: {
+  avatarInitial: { fontSize: 38, color: "#fff", fontWeight: "700" },
+  cameraBadge: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
+    bottom: 2,
+    right: 2,
     width: 28,
     height: 28,
     borderRadius: 14,
+    backgroundColor: "#378ADD",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
+    borderColor: HEADER_BG,
   },
-  userName: { marginBottom: spacing[1] },
+  headerName: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: spacing[1],
+  },
+  headerSub: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.5)",
+  },
   statsRow: {
     flexDirection: "row",
-    alignItems: "center",
-    marginTop: spacing[4],
-    paddingTop: spacing[4],
+    marginTop: spacing[5],
+    paddingTop: spacing[5],
     borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    width: "100%",
   },
   statItem: { flex: 1, alignItems: "center" },
-  statDivider: { width: 1, height: 30 },
-  sectionTitle: {
-    marginHorizontal: spacing[4],
-    marginTop: spacing[4],
-    marginBottom: spacing[4],
+  statNum: { fontSize: 22, fontWeight: "700", color: "#FFFFFF" },
+  statLabel: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.5)",
+    marginTop: 2,
   },
-  achievementsGrid: {
+  statDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignSelf: "center",
+  },
+
+  // ── Body ────────────────────────────────────────────────────────────────────
+  body: { paddingHorizontal: spacing[4], paddingTop: spacing[5] },
+
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.9,
+    marginBottom: spacing[2],
+    marginLeft: spacing[1],
+  },
+
+  card: {
+    borderRadius: 14,
+    overflow: "hidden",
+    marginBottom: spacing[1],
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  menuRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing[3],
-    marginBottom: spacing[6],
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3] + 2,
+    minHeight: 54,
   },
-  achievementCard: {
-    width: "22%",
-    aspectRatio: 1,
-    borderRadius: borderRadius.xl,
+  menuRowLast: {},
+  menuLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    flex: 1,
+  },
+  menuLabel: { fontSize: 15, fontWeight: "500" },
+  menuRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+  },
+  menuValue: { fontSize: 14 },
+
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing[2],
   },
-  achievementLocked: { opacity: 0.4 },
-  achievementName: { marginTop: spacing[1], textAlign: "center" },
-  settingItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+
+  chipRow: { flexDirection: "row", gap: spacing[2] },
+  chip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1] + 2,
+    borderRadius: 8,
+    minWidth: 36,
     alignItems: "center",
-    paddingVertical: spacing[3],
-    paddingHorizontal: spacing[4],
   },
-  settingInfo: { flexDirection: "row", alignItems: "center" },
-  settingIcon: { marginRight: spacing[3] },
-  settingValue: { flexDirection: "row", alignItems: "center", gap: spacing[1] },
-  intervalRow: { flexDirection: 'row', gap: spacing[2] },
-  intervalChip: { paddingHorizontal: spacing[4], paddingVertical: spacing[2], borderRadius: borderRadius.full, borderWidth: 1 },
-  schedulingContainer: {
+
+  noticeRow: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
+  },
+  noticeText: { fontSize: 11 },
+
+  achievementRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3] + 2,
+    gap: spacing[3],
+    minHeight: 54,
+  },
+  unlockedBadge: { marginLeft: "auto" },
+
+  schedulingRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: spacing[4],
-    gap: spacing[2],
   },
-  schedulingText: { marginLeft: spacing[2] },
-  bottomSpacer: { height: spacing[20] },
 
-  // Modal
+  // ── Modals ──────────────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
-  modalSheetContent: {
+  modalSheet: {
     borderTopLeftRadius: borderRadius["3xl"],
     borderTopRightRadius: borderRadius["3xl"],
     paddingHorizontal: spacing[6],
@@ -1354,6 +1533,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing[4],
   },
   modalDescription: { marginBottom: spacing[6] },
+
   goalGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1369,6 +1549,7 @@ const styles = StyleSheet.create({
   },
   goalButtonInner: { flex: 1, justifyContent: "center", alignItems: "center" },
   goalButtonText: { lineHeight: 20, includeFontPadding: false },
+
   timePickerContainer: {
     flexDirection: "row",
     gap: spacing[4],
@@ -1385,6 +1566,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     marginVertical: spacing[1],
   },
+
   actionButton: {
     height: 48,
     borderRadius: borderRadius.full,
@@ -1393,7 +1575,6 @@ const styles = StyleSheet.create({
     marginTop: spacing[5],
   },
 
-  // Edit Profile
   feedbackBox: {
     flexDirection: "row",
     alignItems: "center",

@@ -15,25 +15,33 @@ const wordCache = new Map<string, Word>();
 /**
  * Fetch raw API response for a word
  */
-async function fetchWordFromAPI(word: string): Promise<DictionaryAPIResponse[] | null> {
+async function fetchWordFromAPI(
+  word: string,
+  attempt = 0,
+): Promise<DictionaryAPIResponse[] | null> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
   try {
     const response = await fetch(
       `${API_BASE_URL}/${encodeURIComponent(word.toLowerCase())}`,
       { headers: { Accept: 'application/json' }, signal: controller.signal }
     );
-    clearTimeout(timeout);
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       if (response.status === 404) return null;
-      throw new Error(`API error: ${response.status}`);
+      // Retry server errors (5xx) up to 2 more times with back-off
+      if (response.status >= 500 && attempt < 2) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        return fetchWordFromAPI(word, attempt + 1);
+      }
+      return null;
     }
 
     return await response.json() as DictionaryAPIResponse[];
   } catch (error) {
-    clearTimeout(timeout);
+    clearTimeout(timeoutId);
     if (__DEV__) console.error(`[Dictionary] fetch failed for "${word}":`, error);
     return null;
   }

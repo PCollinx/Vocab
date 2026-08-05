@@ -198,7 +198,7 @@ export default function ProgressScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 100 },
+  scrollContent: { paddingBottom: 20 },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[3], marginBottom: spacing[4] },
   statCard: { width: "47%", alignItems: "center", paddingVertical: spacing[4] },
   weeklyCard: { marginBottom: spacing[4] },
@@ -217,5 +217,5 @@ const styles = StyleSheet.create({
   heatmapRow: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   heatmapDayLabel: { width: 32 },
   heatmapCell: { flex: 1, height: 32, borderRadius: borderRadius.md },
-  bottomSpacer: { height: spacing[20] },
+  bottomSpacer: { height: 0 },
 });

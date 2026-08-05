@@ -173,7 +173,7 @@ export default function BookmarksScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 50 },
+  scrollContent: { paddingBottom: 20 },
   metricsRow: { flexDirection: "row", gap: spacing[2], marginBottom: spacing[4] },
   metricPill: {
     flexDirection: "row", alignItems: "center", gap: spacing[1],
@@ -204,5 +204,5 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 2,
     borderRadius: borderRadius.full, paddingHorizontal: spacing[2], paddingVertical: spacing[1],
   },
-  bottomSpacer: { height: spacing[20] },
+  bottomSpacer: { height: 0 },
 });

@@ -296,10 +296,12 @@ export const useAppStore = create<AppState>()(
         try {
           const goal = Math.max(1, dailyGoal);
           const todayEntry = getWordForDate(new Date());
-          const extras = getRandomWords(goal + 2)
+          // Request goal+5 candidates so API failures have replacements.
+          const extras = getRandomWords(goal + 5)
             .filter(w => w.word !== todayEntry.word)
-            .slice(0, goal - 1);
-          const words = await getWords([todayEntry, ...extras]);
+            .slice(0, goal + 4);
+          const fetched = await getWords([todayEntry, ...extras]);
+          const words = fetched.slice(0, goal);
           if (words.length === 0) throw new Error('No words returned');
           set({ dailyWords: words, dailyWordsDate: today, currentWordIndex: 0, isLoadingDailyWords: false, dailyWordsError: false });
         } catch (error) {
@@ -314,10 +316,12 @@ export const useAppStore = create<AppState>()(
           const { dailyGoal } = get();
           const goal = Math.max(1, dailyGoal);
           const todayEntry = getWordForDate(new Date());
-          const extras = getRandomWords(goal + 2)
+          // Request goal+5 candidates so API failures have replacements.
+          const extras = getRandomWords(goal + 5)
             .filter(w => w.word !== todayEntry.word)
-            .slice(0, goal - 1);
-          const words = await getWords([todayEntry, ...extras]);
+            .slice(0, goal + 4);
+          const fetched = await getWords([todayEntry, ...extras]);
+          const words = fetched.slice(0, goal);
           if (words.length === 0) throw new Error('No words returned');
           const today = new Date().toISOString().split('T')[0];
           set({ dailyWords: words, dailyWordsDate: today, currentWordIndex: 0, isLoadingDailyWords: false, dailyWordsError: false });
