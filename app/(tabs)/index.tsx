@@ -122,27 +122,6 @@ const CarouselCard = React.memo(
           onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
         >
           <Card style={styles.wordCard}>
-            {isLearned && (
-              <View
-                style={[
-                  styles.learnedBanner,
-                  { backgroundColor: colors.correctLight },
-                ]}
-              >
-                <Ionicons
-                  name="checkmark-circle"
-                  size={14}
-                  color={colors.correct}
-                />
-                <Text
-                  variant="caption"
-                  style={{ color: colors.correct, fontWeight: "700" }}
-                >
-                  Learned
-                </Text>
-              </View>
-            )}
-
             <Text variant="h2" color="heading" style={styles.wordTitle}>
               {item.word}
             </Text>

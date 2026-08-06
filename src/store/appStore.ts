@@ -289,7 +289,7 @@ export const useAppStore = create<AppState>()(
       // ========== Daily Carousel ==========
       fetchDailyWords: async () => {
         const today = new Date().toISOString().split('T')[0];
-        const { dailyWordsDate, dailyWords, dailyGoal } = get();
+        const { dailyWordsDate, dailyWords, dailyGoal, learnedWords } = get();
 
         if (dailyWordsDate === today && dailyWords.length > 0) return;
 
@@ -297,10 +297,12 @@ export const useAppStore = create<AppState>()(
         try {
           const goal = Math.max(1, dailyGoal);
           const todayEntry = getWordForDate(new Date());
-          // Request goal+5 candidates so API failures have replacements.
-          const extras = getRandomWords(goal + 5)
-            .filter(w => w.word !== todayEntry.word)
-            .slice(0, goal + 4);
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const recentlyLearned = learnedWords
+            .filter(w => w.lastReviewed >= thirtyDaysAgo)
+            .map(w => w.wordId);
+          const exclude = [todayEntry.word, ...recentlyLearned];
+          const extras = getRandomWords(goal + 5, exclude).slice(0, goal + 4);
           const fetched = await getWords([todayEntry, ...extras]);
           const words = fetched.slice(0, goal);
           if (words.length === 0) throw new Error('No words returned');
@@ -314,13 +316,15 @@ export const useAppStore = create<AppState>()(
       refreshDailyWords: async () => {
         set({ isLoadingDailyWords: true, dailyWordsError: false });
         try {
-          const { dailyGoal } = get();
+          const { dailyGoal, learnedWords } = get();
           const goal = Math.max(1, dailyGoal);
           const todayEntry = getWordForDate(new Date());
-          // Request goal+5 candidates so API failures have replacements.
-          const extras = getRandomWords(goal + 5)
-            .filter(w => w.word !== todayEntry.word)
-            .slice(0, goal + 4);
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const recentlyLearned = learnedWords
+            .filter(w => w.lastReviewed >= thirtyDaysAgo)
+            .map(w => w.wordId);
+          const exclude = [todayEntry.word, ...recentlyLearned];
+          const extras = getRandomWords(goal + 5, exclude).slice(0, goal + 4);
           const fetched = await getWords([todayEntry, ...extras]);
           const words = fetched.slice(0, goal);
           if (words.length === 0) throw new Error('No words returned');
