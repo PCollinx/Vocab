@@ -439,13 +439,6 @@ export const useAppStore = create<AppState>()(
           });
         }
 
-        // Auto-advance carousel if the learned word is the current one
-        const { dailyWords, currentWordIndex } = get();
-        const currentCarouselWord = dailyWords[currentWordIndex];
-        if (currentCarouselWord && currentCarouselWord.word.toLowerCase() === wordId.toLowerCase()) {
-          get().advanceToNextWord();
-        }
-
         get().updateStreak();
       },
 

@@ -344,13 +344,13 @@ export default function HomeScreen() {
     w => w.lastReviewed?.startsWith(todayKey)
   ).length;
 
-  // Filter out already-learned words so the carousel never shows them again
-  const unlearnedDailyWords = useMemo(() =>
-    dailyWords.filter(w =>
-      !learnedWords.some(l => l.wordId.toLowerCase() === w.word.toLowerCase())
-    ),
-    [dailyWords, learnedWords]
+  const learnedSet = useMemo(
+    () => new Set(learnedWords.map(l => l.wordId.toLowerCase())),
+    [learnedWords]
   );
+
+  const allDailyLearned = dailyWords.length > 0 &&
+    dailyWords.every(w => learnedSet.has(w.word.toLowerCase()));
 
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
   const [localActiveIndex, setLocalActiveIndex] = useState(0);
@@ -367,14 +367,14 @@ export default function HomeScreen() {
     fetchDailyWords();
   }, []);
 
-  // Only auto-fetch when the carousel is completely empty — never interrupt visible cards.
+  // When all daily words are learned, silently append more to keep the carousel going.
   useEffect(() => {
-    if (unlearnedDailyWords.length === 0 && !isLoadingDailyWords && dailyWords.length > 0) {
-      refreshDailyWords();
+    if (allDailyLearned && !isLoadingDailyWords) {
+      appendDailyWords();
     }
-  }, [unlearnedDailyWords.length]);
+  }, [allDailyLearned]);
 
-  const N = unlearnedDailyWords.length;
+  const N = dailyWords.length;
 
   const flatListRef = useRef<FlatList>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -432,25 +432,9 @@ export default function HomeScreen() {
 
   const handleMarkLearned = useCallback(
     (word: Word) => {
-      if (N === 0) return;
-      if (N === 1) {
-        markWordLearned(word.word);
-        return;
-      }
-      const r = localActiveIndex;
-      const nextIdx = r + 1 < N ? r + 1 : 0;
-      flatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
-      setLocalActiveIndex(nextIdx);
-      prevStoreIndex.current = nextIdx;
-
-      setTimeout(() => {
-        const newCurrentWordIndex = r < N - 1 ? r : 0;
-        prevStoreIndex.current = newCurrentWordIndex;
-        setCurrentWordIndex(newCurrentWordIndex);
-        markWordLearned(word.word);
-      }, 350);
+      markWordLearned(word.word);
     },
-    [N, localActiveIndex, markWordLearned, setCurrentWordIndex],
+    [markWordLearned],
   );
 
   const renderItem = useCallback(
@@ -626,7 +610,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
           </Card>
-        ) : N === 0 && todayLearnedCount >= 20 ? (
+        ) : allDailyLearned ? (
           <Card style={styles.singleCard}>
             <View style={styles.loadingContainer}>
               <Ionicons name="checkmark-circle-outline" size={48} color={colors.correct} />
@@ -643,7 +627,7 @@ export default function HomeScreen() {
             <View style={styles.carouselWrapper}>
               <Animated.FlatList
                 ref={flatListRef as any}
-                data={unlearnedDailyWords}
+                data={dailyWords}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
@@ -673,7 +657,7 @@ export default function HomeScreen() {
               <View
                 style={[styles.paginationDots, { marginTop: dotsMarginTop }]}
               >
-                {unlearnedDailyWords.map((_, index) => (
+                {dailyWords.map((_, index) => (
                   <View
                     key={index}
                     style={[
