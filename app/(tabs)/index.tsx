@@ -1,5 +1,6 @@
 import React, {
   useEffect,
+  useLayoutEffect,
   useState,
   useRef,
   useCallback,
@@ -36,7 +37,6 @@ import { Word } from "../../src/types";
 const hasSpeech = !!NativeModules.ExpoSpeech;
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const LOOP_COUNT = 100;
 
 // ─── Per-card animated item ───────────────────────────────────────────────────
 
@@ -376,46 +376,25 @@ export default function HomeScreen() {
 
   const N = unlearnedDailyWords.length;
 
-  const loopedWords = useMemo(
-    () =>
-      N > 0
-        ? Array.from({ length: LOOP_COUNT * N }, (_, i) => unlearnedDailyWords[i % N])
-        : [],
-    [unlearnedDailyWords, N],
-  );
-
-  const getStartIndex = useCallback(
-    (realIndex: number) => Math.floor(LOOP_COUNT / 2) * N + realIndex,
-    [N],
-  );
-
   const flatListRef = useRef<FlatList>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
-  const flatListIndex = useRef(0);
   const prevStoreIndex = useRef(currentWordIndex);
   const userScrolling = useRef(false);
 
-  useEffect(() => {
+  // Fires synchronously before native paint — re-centers instantly when N changes
+  useLayoutEffect(() => {
     if (N === 0) return;
-    const startIdx = getStartIndex(currentWordIndex);
-    flatListIndex.current = startIdx;
-    scrollX.setValue(startIdx * SCREEN_WIDTH);
+    scrollX.setValue(currentWordIndex * SCREEN_WIDTH);
     setLocalActiveIndex(currentWordIndex);
     prevStoreIndex.current = currentWordIndex;
-
-    requestAnimationFrame(() => {
-      flatListRef.current?.scrollToIndex({ index: startIdx, animated: false });
-    });
+    flatListRef.current?.scrollToIndex({ index: currentWordIndex, animated: false });
   }, [N]);
 
   useEffect(() => {
     if (prevStoreIndex.current === currentWordIndex || N === 0) return;
     prevStoreIndex.current = currentWordIndex;
-
-    const nextIdx = flatListIndex.current + 1;
-    flatListIndex.current = nextIdx;
     setLocalActiveIndex(currentWordIndex);
-    flatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
+    flatListRef.current?.scrollToIndex({ index: currentWordIndex, animated: true });
   }, [currentWordIndex, N]);
 
   const handleScrollBeginDrag = useCallback(() => {
@@ -426,19 +405,16 @@ export default function HomeScreen() {
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       userScrolling.current = false;
       const x = e.nativeEvent.contentOffset.x;
-      const rawIdx = Math.round(x / SCREEN_WIDTH);
-      const realIdx = ((rawIdx % N) + N) % N;
-
-      flatListIndex.current = rawIdx;
-      setLocalActiveIndex(realIdx);
-      prevStoreIndex.current = realIdx;
-      setCurrentWordIndex(realIdx);
+      const idx = Math.max(0, Math.min(N - 1, Math.round(x / SCREEN_WIDTH)));
+      setLocalActiveIndex(idx);
+      prevStoreIndex.current = idx;
+      setCurrentWordIndex(idx);
     },
     [N, setCurrentWordIndex],
   );
 
   const getItemLayout = useCallback(
-    (_: any, index: number) => ({
+    (_: unknown, index: number) => ({
       length: SCREEN_WIDTH,
       offset: SCREEN_WIDTH * index,
       index,
@@ -446,34 +422,20 @@ export default function HomeScreen() {
     [],
   );
 
-  // Animate to the next card exactly like a swipe, then mark as learned.
-  // After the word is removed from unlearnedDailyWords the N-change effect
-  // re-centers the looped list with animated:false. We pre-compute what the
-  // correct currentWordIndex will be in the shorter array so that re-center
-  // snaps to the same word we just scrolled to — making the snap invisible.
   const handleMarkLearned = useCallback(
     (word: Word) => {
       if (N === 0) return;
       if (N === 1) {
-        // Only one card left — just mark it; the "all caught up" screen appears.
         markWordLearned(word.word);
         return;
       }
-
       const r = localActiveIndex;
-      const nextFlatListIndex = flatListIndex.current + 1;
-      const nextRealIdx = ((nextFlatListIndex % N) + N) % N;
-
-      // Scroll to the next card with the same animated swipe.
-      flatListRef.current?.scrollToIndex({ index: nextFlatListIndex, animated: true });
-      flatListIndex.current = nextFlatListIndex;
-      setLocalActiveIndex(nextRealIdx);
-      // Keep prevStoreIndex in sync so the store-driven scroll effect skips.
-      prevStoreIndex.current = nextRealIdx;
+      const nextIdx = r + 1 < N ? r + 1 : 0;
+      flatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
+      setLocalActiveIndex(nextIdx);
+      prevStoreIndex.current = nextIdx;
 
       setTimeout(() => {
-        // After word at index r is removed the next word shifts from r+1 → r,
-        // or wraps to 0 when we were at the last position.
         const newCurrentWordIndex = r < N - 1 ? r : 0;
         prevStoreIndex.current = newCurrentWordIndex;
         setCurrentWordIndex(newCurrentWordIndex);
@@ -484,31 +446,25 @@ export default function HomeScreen() {
   );
 
   const renderItem = useCallback(
-    ({ item, index }: { item: Word; index: number }) => {
-      const realIndex = index % N;
-      const word = unlearnedDailyWords[realIndex] ?? item;
-      return (
-        <CarouselCard
-          item={word}
-          index={index}
-          scrollX={scrollX}
-          isBookmarked={isWordBookmarked(word.id)}
-          isLearned={learnedWords.some(
-            (w) => w.wordId.toLowerCase() === word.word.toLowerCase(),
-          )}
-          onMarkLearned={() => handleMarkLearned(word)}
-          onBookmark={() => toggleBookmark(word)}
-          onHeightChange={(h) =>
-            setCardHeights((prev) =>
-              prev[realIndex] === h ? prev : { ...prev, [realIndex]: h },
-            )
-          }
-        />
-      );
-    },
+    ({ item, index }: { item: Word; index: number }) => (
+      <CarouselCard
+        item={item}
+        index={index}
+        scrollX={scrollX}
+        isBookmarked={isWordBookmarked(item.id)}
+        isLearned={learnedWords.some(
+          (w) => w.wordId.toLowerCase() === item.word.toLowerCase(),
+        )}
+        onMarkLearned={() => handleMarkLearned(item)}
+        onBookmark={() => toggleBookmark(item)}
+        onHeightChange={(h) =>
+          setCardHeights((prev) =>
+            prev[index] === h ? prev : { ...prev, [index]: h },
+          )
+        }
+      />
+    ),
     [
-      N,
-      unlearnedDailyWords,
       scrollX,
       isWordBookmarked,
       learnedWords,
@@ -679,12 +635,12 @@ export default function HomeScreen() {
             <View style={styles.carouselWrapper}>
               <Animated.FlatList
                 ref={flatListRef as any}
-                data={loopedWords}
+                data={unlearnedDailyWords}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 scrollEventThrottle={16}
-                initialScrollIndex={getStartIndex(currentWordIndex)}
+                initialScrollIndex={currentWordIndex}
                 getItemLayout={getItemLayout}
                 keyExtractor={(_, index) => String(index)}
                 renderItem={renderItem}
