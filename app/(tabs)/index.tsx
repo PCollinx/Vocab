@@ -1,6 +1,5 @@
 import React, {
   useEffect,
-  useLayoutEffect,
   useState,
   useRef,
   useCallback,
@@ -381,8 +380,9 @@ export default function HomeScreen() {
   const prevStoreIndex = useRef(currentWordIndex);
   const userScrolling = useRef(false);
 
-  // Fires synchronously before native paint — re-centers instantly when N changes
-  useLayoutEffect(() => {
+  // Re-center scroll when N changes (word marked learned). No rAF needed —
+  // plain FlatList lets native batch the layout update and scroll together.
+  useEffect(() => {
     if (N === 0) return;
     scrollX.setValue(currentWordIndex * SCREEN_WIDTH);
     setLocalActiveIndex(currentWordIndex);
