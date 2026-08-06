@@ -116,6 +116,7 @@ interface AppState {
   fetchDailyWords: () => Promise<void>;
   refreshDailyWords: () => Promise<void>;
   appendDailyWords: () => Promise<void>;
+  clearTodayLearned: () => void;
   removeDailyWord: (wordId: string) => void;
   advanceToNextWord: () => void;
   setCurrentWordIndex: (index: number) => void;
@@ -353,6 +354,17 @@ export const useAppStore = create<AppState>()(
             set({ dailyWords: [...get().dailyWords, ...newWords] });
           }
         } catch {}
+      },
+
+      clearTodayLearned: () => {
+        const { learnedWords, totalWordsLearned } = get();
+        const todayKey = new Date().toISOString().split('T')[0];
+        const todayEntries = learnedWords.filter(w => w.lastReviewed?.startsWith(todayKey));
+        const kept = learnedWords.filter(w => !w.lastReviewed?.startsWith(todayKey));
+        set({
+          learnedWords: kept,
+          totalWordsLearned: Math.max(0, totalWordsLearned - todayEntries.length),
+        });
       },
 
       removeDailyWord: (wordId: string) => {

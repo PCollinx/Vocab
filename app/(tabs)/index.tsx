@@ -313,6 +313,7 @@ export default function HomeScreen() {
     fetchDailyWords,
     refreshDailyWords,
     appendDailyWords,
+    clearTodayLearned,
     setCurrentWordIndex,
     learnedWords,
     markWordLearned,
@@ -338,6 +339,7 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    clearTodayLearned();
     await refreshDailyWords();
     setIsRefreshing(false);
   };
