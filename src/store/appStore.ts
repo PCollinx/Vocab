@@ -317,16 +317,17 @@ export const useAppStore = create<AppState>()(
       refreshDailyWords: async () => {
         set({ isLoadingDailyWords: true, dailyWordsError: false });
         try {
-          const { dailyGoal, learnedWords } = get();
+          const { dailyGoal, learnedWords, dailyWords } = get();
           const goal = Math.max(1, dailyGoal);
-          const todayEntry = getWordForDate(new Date());
-          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          const recentlyLearned = learnedWords
-            .filter(w => w.lastReviewed >= thirtyDaysAgo)
-            .map(w => w.wordId);
-          const exclude = [todayEntry.word, ...recentlyLearned];
-          const extras = getRandomWords(goal + 5, exclude).slice(0, goal + 4);
-          const fetched = await getWords([todayEntry, ...extras]);
+          // Exclude words already seen today (in carousel) and all ever-learned words
+          const exclude = [
+            ...dailyWords.map(w => w.word),
+            ...learnedWords.map(w => w.wordId),
+          ];
+          const candidates = getRandomWords(goal + 5, exclude).slice(0, goal + 4);
+          const fetched = await getWords(
+            candidates.map(e => ({ word: e.word, category: e.category, difficulty: e.difficulty }))
+          );
           const words = fetched.slice(0, goal);
           if (words.length === 0) throw new Error('No words returned');
           const today = new Date().toISOString().split('T')[0];
