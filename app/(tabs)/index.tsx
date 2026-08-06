@@ -333,6 +333,7 @@ export default function HomeScreen() {
     dailyWordsError,
     fetchDailyWords,
     refreshDailyWords,
+    appendDailyWords,
     setCurrentWordIndex,
     learnedWords,
     markWordLearned,
@@ -396,6 +397,13 @@ export default function HomeScreen() {
     setLocalActiveIndex(currentWordIndex);
     flatListRef.current?.scrollToIndex({ index: currentWordIndex, animated: true });
   }, [currentWordIndex, N]);
+
+  // Fetch more words silently when the user reaches the second-to-last card
+  useEffect(() => {
+    if (N > 1 && localActiveIndex >= N - 2) {
+      appendDailyWords();
+    }
+  }, [localActiveIndex, N]);
 
   const handleScrollBeginDrag = useCallback(() => {
     userScrolling.current = true;

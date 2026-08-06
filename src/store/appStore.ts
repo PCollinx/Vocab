@@ -115,6 +115,7 @@ interface AppState {
   // Daily Carousel actions
   fetchDailyWords: () => Promise<void>;
   refreshDailyWords: () => Promise<void>;
+  appendDailyWords: () => Promise<void>;
   removeDailyWord: (wordId: string) => void;
   advanceToNextWord: () => void;
   setCurrentWordIndex: (index: number) => void;
@@ -329,6 +330,25 @@ export const useAppStore = create<AppState>()(
           if (__DEV__) console.error('Error refreshing daily words:', error);
           set({ isLoadingDailyWords: false, dailyWordsError: true });
         }
+      },
+
+      appendDailyWords: async () => {
+        const { dailyWords, learnedWords } = get();
+        const exclude = [
+          ...dailyWords.map(w => w.word),
+          ...learnedWords.map(w => w.wordId),
+        ];
+        const candidates = getRandomWords(15, exclude).slice(0, 14);
+        if (candidates.length === 0) return;
+        try {
+          const fetched = await getWords(
+            candidates.map(e => ({ word: e.word, category: e.category, difficulty: e.difficulty }))
+          );
+          const newWords = fetched.slice(0, 10);
+          if (newWords.length > 0) {
+            set({ dailyWords: [...get().dailyWords, ...newWords] });
+          }
+        } catch {}
       },
 
       removeDailyWord: (wordId: string) => {
