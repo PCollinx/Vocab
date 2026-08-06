@@ -31,7 +31,7 @@ import {
 } from "../../src/services/notificationService";
 import type { Colors } from "../../src/constants/colors";
 
-const HEADER_BG = "#185FA5";
+const HEADER_BG = "#378ADD";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
