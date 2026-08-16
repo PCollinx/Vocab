@@ -22,7 +22,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import * as Speech from "expo-speech";
 import { Container, Text, Card, Badge } from "../../src/components";
 import { spacing, borderRadius } from "../../src/constants";
@@ -59,27 +58,17 @@ const CarouselCard = React.memo(
     onHeightChange,
   }: CarouselItemProps) => {
     const { colors } = useTheme();
-    const player = useAudioPlayer(item.audioUrl ?? null);
-    const playerStatus = useAudioPlayerStatus(player);
-    const isPlaying = playerStatus?.playing ?? false;
+    const [isSpeaking, setIsSpeaking] = useState(false);
 
-    const playPronunciation = async () => {
-      if (isPlaying) return;
-      if (item.audioUrl) {
-        try {
-          // Player already has this URL from useAudioPlayer — just play.
-          // If it finished, seek back to start first.
-          if (playerStatus?.didJustFinish) {
-            await player.seekTo(0);
-          }
-          player.play();
-        } catch {}
-      } else {
-        try {
-          const speaking = await Speech.isSpeakingAsync();
-          if (!speaking) Speech.speak(item.word, { language: "en" });
-        } catch {}
-      }
+    const playPronunciation = () => {
+      if (isSpeaking) return;
+      setIsSpeaking(true);
+      Speech.speak(item.word, {
+        language: "en",
+        onDone: () => setIsSpeaking(false),
+        onStopped: () => setIsSpeaking(false),
+        onError: () => setIsSpeaking(false),
+      });
     };
 
     const animations = useRef(() => {
@@ -145,10 +134,10 @@ const CarouselCard = React.memo(
                   <TouchableOpacity
                     onPress={playPronunciation}
                     style={[styles.speakerBtn, { backgroundColor: colors.primaryLight }]}
-                    disabled={isPlaying}
+                    disabled={isSpeaking}
                   >
                     <Ionicons
-                      name={isPlaying ? "volume-high" : "volume-medium-outline"}
+                      name={isSpeaking ? "volume-high" : "volume-medium-outline"}
                       size={18}
                       color={colors.primary}
                     />
