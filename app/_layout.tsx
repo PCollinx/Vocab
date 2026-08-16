@@ -5,6 +5,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
+import { setAudioModeAsync } from 'expo-audio';
 import { Stack, useRouter } from 'expo-router';
 import { initSentry } from '../src/services/sentry';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -42,6 +43,10 @@ export default function RootLayout() {
       });
     });
     return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true });
   }, []);
 
   useEffect(() => {

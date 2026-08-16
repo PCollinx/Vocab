@@ -72,7 +72,8 @@ const CarouselCard = React.memo(
       if (isPlaying) return;
       if (item.audioUrl) {
         try {
-          player.seekTo(0);
+          // Replace restarts the player from the beginning reliably
+          player.replace(item.audioUrl);
           player.play();
         } catch {}
       } else if (hasSpeech) {
