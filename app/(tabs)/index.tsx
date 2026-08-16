@@ -15,7 +15,6 @@ import {
   FlatList,
   Pressable,
   Dimensions,
-  NativeModules,
   Animated,
   RefreshControl,
   NativeSyntheticEvent,
@@ -24,16 +23,12 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import * as Speech from "expo-speech";
 import { Container, Text, Card, Badge } from "../../src/components";
 import { spacing, borderRadius } from "../../src/constants";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useAppStore } from "../../src/store/appStore";
 import { Word } from "../../src/types";
-
-// True only when the ExpoSpeech native module is present in the current build.
-// Avoids importing expo-speech at module level so Metro doesn't bundle it
-// eagerly and crash dev clients built before expo-speech was added.
-const hasSpeech = !!NativeModules.ExpoSpeech;
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -72,15 +67,17 @@ const CarouselCard = React.memo(
       if (isPlaying) return;
       if (item.audioUrl) {
         try {
-          // Replace restarts the player from the beginning reliably
-          player.replace(item.audioUrl);
+          // Player already has this URL from useAudioPlayer — just play.
+          // If it finished, seek back to start first.
+          if (playerStatus?.didJustFinish) {
+            await player.seekTo(0);
+          }
           player.play();
         } catch {}
-      } else if (hasSpeech) {
+      } else {
         try {
-          const S = require("expo-speech");
-          const speaking = await S.isSpeakingAsync();
-          if (!speaking) S.speak(item.word, { language: 'en' });
+          const speaking = await Speech.isSpeakingAsync();
+          if (!speaking) Speech.speak(item.word, { language: "en" });
         } catch {}
       }
     };
@@ -144,7 +141,7 @@ const CarouselCard = React.memo(
                     {item.pronunciation || "N/A"}
                   </Text>
                 </View>
-                {(item.audioUrl || hasSpeech) && (
+                {(item.audioUrl || true) && (
                   <TouchableOpacity
                     onPress={playPronunciation}
                     style={[styles.speakerBtn, { backgroundColor: colors.primaryLight }]}
