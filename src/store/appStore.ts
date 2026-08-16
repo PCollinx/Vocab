@@ -116,9 +116,6 @@ interface AppState {
   fetchDailyWords: () => Promise<void>;
   refreshDailyWords: () => Promise<void>;
   appendDailyWords: () => Promise<void>;
-  clearTodayLearned: () => void;
-  removeDailyWord: (wordId: string) => void;
-  advanceToNextWord: () => void;
   setCurrentWordIndex: (index: number) => void;
 
   // Word actions
@@ -355,30 +352,6 @@ export const useAppStore = create<AppState>()(
             set({ dailyWords: [...get().dailyWords, ...newWords] });
           }
         } catch {}
-      },
-
-      clearTodayLearned: () => {
-        const { learnedWords, totalWordsLearned } = get();
-        const todayKey = new Date().toISOString().split('T')[0];
-        const todayEntries = learnedWords.filter(w => w.lastReviewed?.startsWith(todayKey));
-        const kept = learnedWords.filter(w => !w.lastReviewed?.startsWith(todayKey));
-        set({
-          learnedWords: kept,
-          totalWordsLearned: Math.max(0, totalWordsLearned - todayEntries.length),
-        });
-      },
-
-      removeDailyWord: (wordId: string) => {
-        const { dailyWords, currentWordIndex } = get();
-        const filtered = dailyWords.filter(w => w.word.toLowerCase() !== wordId.toLowerCase());
-        const newIndex = Math.min(currentWordIndex, Math.max(0, filtered.length - 1));
-        set({ dailyWords: filtered, currentWordIndex: newIndex });
-      },
-
-      advanceToNextWord: () => {
-        const { currentWordIndex, dailyWords } = get();
-        if (dailyWords.length === 0) return;
-        set({ currentWordIndex: (currentWordIndex + 1) % dailyWords.length });
       },
 
       setCurrentWordIndex: (index: number) => {

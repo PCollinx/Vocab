@@ -130,19 +130,17 @@ const CarouselCard = React.memo(
                     {item.pronunciation || "N/A"}
                   </Text>
                 </View>
-                {(item.audioUrl || true) && (
-                  <TouchableOpacity
-                    onPress={playPronunciation}
-                    style={[styles.speakerBtn, { backgroundColor: colors.primaryLight }]}
-                    disabled={isSpeaking}
-                  >
-                    <Ionicons
-                      name={isSpeaking ? "volume-high" : "volume-medium-outline"}
-                      size={18}
-                      color={colors.primary}
-                    />
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  onPress={playPronunciation}
+                  style={[styles.speakerBtn, { backgroundColor: colors.primaryLight }]}
+                  disabled={isSpeaking}
+                >
+                  <Ionicons
+                    name={isSpeaking ? "volume-high" : "volume-medium-outline"}
+                    size={18}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
               </View>
             </View>
 
