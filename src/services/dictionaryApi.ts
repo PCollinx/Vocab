@@ -152,30 +152,20 @@ export async function getWord(
 }
 
 /**
- * Fetch multiple words with a concurrency cap of 3.
- * iOS / New Architecture cancels fetches when too many hit the same host at once.
+ * Fetch multiple words one at a time.
+ * iOS New Architecture (Expo SDK 57) cancels fetches when concurrent requests
+ * pile up against the same host — sequential is the safe path.
  * Failed / missing words are silently skipped.
  */
 export async function getWords(
   words: { word: string; category?: WordCategory; difficulty?: 'easy' | 'medium' | 'hard' }[]
 ): Promise<Word[]> {
-  const CONCURRENCY = 3;
-  const results: (Word | null)[] = new Array(words.length).fill(null);
-  let next = 0;
-
-  async function worker() {
-    while (next < words.length) {
-      const idx = next++;
-      const { word, category, difficulty } = words[idx];
-      results[idx] = await getWord(word, category, difficulty);
-    }
+  const results: Word[] = [];
+  for (const { word, category, difficulty } of words) {
+    const result = await getWord(word, category, difficulty);
+    if (result) results.push(result);
   }
-
-  await Promise.all(
-    Array.from({ length: Math.min(CONCURRENCY, words.length) }, worker)
-  );
-
-  return results.filter((r): r is Word => r !== null);
+  return results;
 }
 
 /**

@@ -289,9 +289,10 @@ export const useAppStore = create<AppState>()(
       // ========== Daily Carousel ==========
       fetchDailyWords: async () => {
         const today = new Date().toISOString().split('T')[0];
-        const { dailyWordsDate, dailyWords, dailyGoal, learnedWords } = get();
+        const { dailyWordsDate, dailyWords, dailyGoal, learnedWords, isLoadingDailyWords } = get();
 
         if (dailyWordsDate === today && dailyWords.length > 0) return;
+        if (isLoadingDailyWords) return;
 
         set({ isLoadingDailyWords: true, dailyWordsError: false });
         try {
