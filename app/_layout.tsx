@@ -78,6 +78,7 @@ export default function RootLayout() {
                 word: data.word,
                 definition: data.definition ?? '',
               });
+              useAppStore.setState({ pendingNotificationWord: data.word });
               router.replace('/(tabs)/');
             }
           } catch (error) {
@@ -116,6 +117,7 @@ export default function RootLayout() {
               const alreadyHandled = useAppStore.getState().notificationHistory.some(h => h.id === id);
               if (!alreadyHandled) {
                 addNotificationToHistory({ id, word: data.word, definition: data.definition ?? '' });
+                useAppStore.setState({ pendingNotificationWord: data.word });
                 setTimeout(() => router.replace('/(tabs)/'), 300);
               }
             }

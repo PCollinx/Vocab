@@ -63,6 +63,7 @@ interface AppState {
   currentWordIndex: number;
   isLoadingDailyWords: boolean;
   dailyWordsError: boolean;
+  pendingNotificationWord: string | null;
 
   // Word Library
   fetchedWords: Word[];
@@ -178,6 +179,7 @@ const initialState = {
   currentWordIndex: 0,
   isLoadingDailyWords: false,
   dailyWordsError: false,
+  pendingNotificationWord: null,
   fetchedWords: [],
   bookmarkedWords: [],
   learnedWords: [],

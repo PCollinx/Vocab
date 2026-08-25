@@ -301,6 +301,7 @@ export default function HomeScreen() {
     setCurrentWordIndex,
     learnedWords,
     markWordLearned,
+    pendingNotificationWord,
   } = useAppStore();
 
   const todayKey = new Date().toISOString().split('T')[0];
@@ -368,6 +369,19 @@ export default function HomeScreen() {
       appendDailyWords();
     }
   }, [localActiveIndex, N]);
+
+  // When the app opens from a notification tap, scroll to that word once
+  // daily words are loaded (handles both same-day cache hit and cross-day fetch).
+  useEffect(() => {
+    if (!pendingNotificationWord || isLoadingDailyWords || N === 0) return;
+    const idx = dailyWords.findIndex(
+      w => w.word.toLowerCase() === pendingNotificationWord.toLowerCase()
+    );
+    if (idx !== -1) {
+      setCurrentWordIndex(idx);
+    }
+    useAppStore.setState({ pendingNotificationWord: null });
+  }, [pendingNotificationWord, isLoadingDailyWords, N]);
 
   const handleScrollBeginDrag = useCallback(() => {
     userScrolling.current = true;
@@ -528,7 +542,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Word Carousel */}
-        {isLoadingDailyWords && N === 0 ? (
+        {isLoadingDailyWords && (N === 0 || !!pendingNotificationWord) ? (
           <Card style={styles.singleCard}>
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
