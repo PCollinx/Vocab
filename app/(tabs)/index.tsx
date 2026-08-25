@@ -28,6 +28,7 @@ import { spacing, borderRadius } from "../../src/constants";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useAppStore } from "../../src/store/appStore";
 import { Word } from "../../src/types";
+import { randomBonusCard } from "../../src/data/bonusFlashcards";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -279,6 +280,59 @@ const CarouselCard = React.memo(
     );
   },
 );
+
+// ─── Bonus Flashcard (loading state) ──────────────────────────────────────────
+
+function BonusFlashcard() {
+  const { colors } = useTheme();
+  const [card] = useState(() => randomBonusCard());
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 380, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+      <View style={bonusStyles.header}>
+        <View style={[bonusStyles.badge, { backgroundColor: colors.primaryLight }]}>
+          <Text style={[bonusStyles.badgeText, { color: colors.primary }]}>✦ Bonus Word</Text>
+        </View>
+      </View>
+
+      <Text style={bonusStyles.emoji}>{card.emoji}</Text>
+
+      <Text style={[bonusStyles.word, { color: colors.textHeading }]}>{card.word}</Text>
+      <Text style={[bonusStyles.pos, { color: colors.textMuted }]}>{card.partOfSpeech}</Text>
+
+      <View style={[bonusStyles.divider, { backgroundColor: colors.border }]} />
+
+      <Text style={[bonusStyles.definition, { color: colors.textBody }]}>{card.definition}</Text>
+
+      <View style={bonusStyles.footer}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={[bonusStyles.loadingText, { color: colors.textMuted }]}>Loading your words…</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+const bonusStyles = StyleSheet.create({
+  header:      { alignItems: "center", marginBottom: spacing[3] },
+  badge:       { paddingHorizontal: spacing[3], paddingVertical: spacing[1], borderRadius: 99 },
+  badgeText:   { fontSize: 11, fontWeight: "600", letterSpacing: 0.5 },
+  emoji:       { textAlign: "center", fontSize: 48, marginBottom: spacing[3] },
+  word:        { textAlign: "center", fontSize: 28, fontWeight: "700", letterSpacing: -0.5, marginBottom: spacing[1] },
+  pos:         { textAlign: "center", fontSize: 13, fontStyle: "italic", marginBottom: spacing[4] },
+  divider:     { height: 1, marginHorizontal: spacing[6], marginBottom: spacing[4] },
+  definition:  { textAlign: "center", fontSize: 15, lineHeight: 22, paddingHorizontal: spacing[4], marginBottom: spacing[6] },
+  footer:      { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing[2] },
+  loadingText: { fontSize: 13 },
+});
 
 // ─── Home Screen ──────────────────────────────────────────────────────────────
 
@@ -545,14 +599,7 @@ export default function HomeScreen() {
         {isLoadingDailyWords && (N === 0 || !!pendingNotificationWord) ? (
           <Card style={styles.singleCard}>
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text
-                variant="body"
-                color="muted"
-                style={{ marginTop: spacing[3] }}
-              >
-                Loading your words...
-              </Text>
+              <BonusFlashcard />
             </View>
           </Card>
         ) : dailyWordsError ? (
