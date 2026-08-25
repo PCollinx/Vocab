@@ -152,22 +152,30 @@ export async function getWord(
 }
 
 /**
- * Fetch multiple words concurrently.
+ * Fetch multiple words with a concurrency cap of 3.
+ * iOS / New Architecture cancels fetches when too many hit the same host at once.
  * Failed / missing words are silently skipped.
  */
 export async function getWords(
   words: { word: string; category?: WordCategory; difficulty?: 'easy' | 'medium' | 'hard' }[]
 ): Promise<Word[]> {
-  const results = await Promise.allSettled(
-    words.map(({ word, category, difficulty }) => getWord(word, category, difficulty))
+  const CONCURRENCY = 3;
+  const results: (Word | null)[] = new Array(words.length).fill(null);
+  let next = 0;
+
+  async function worker() {
+    while (next < words.length) {
+      const idx = next++;
+      const { word, category, difficulty } = words[idx];
+      results[idx] = await getWord(word, category, difficulty);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, words.length) }, worker)
   );
 
-  return results
-    .filter(
-      (r): r is PromiseFulfilledResult<Word> =>
-        r.status === 'fulfilled' && r.value !== null
-    )
-    .map(r => r.value);
+  return results.filter((r): r is Word => r !== null);
 }
 
 /**
